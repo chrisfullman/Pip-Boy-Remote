@@ -84,9 +84,17 @@ if [[ -n "${MINGW_PREFIX}" ]]; then
     done
 fi
 
-# Create the ZIP
+# Create the ZIP.
+# 'zip' is available on macOS / Linux; Windows runners ship 7-Zip instead.
 mkdir -p "${OUTPUT_DIR}"
 ZIP_PATH="${OUTPUT_DIR}/PipBoyRemote-mod.zip"
 rm -f "${ZIP_PATH}"
-(cd "${PACKAGE_ROOT}" && zip -r "../PipBoyRemote-mod.zip" "Data/")
+if command -v zip &>/dev/null; then
+    (cd "${PACKAGE_ROOT}" && zip -r "../PipBoyRemote-mod.zip" "Data/")
+elif command -v 7z &>/dev/null; then
+    (cd "${PACKAGE_ROOT}" && 7z a -tzip "../PipBoyRemote-mod.zip" "Data/")
+else
+    echo "ERROR: Neither 'zip' nor '7z' found. Cannot create ZIP." >&2
+    exit 1
+fi
 echo "==> Package written to ${ZIP_PATH}"
