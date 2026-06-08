@@ -37,14 +37,14 @@ jobs:
         working-directory: backend
         run: |
           xmake config --plat=windows --arch=x64 --mode=release -y
-          xmake build PipBoyRemote -y
+          xmake build PipBoyRemote
 
       # ── Run unit tests ───────────────────────────────────────────────────
       - name: Build and run unit tests
         working-directory: backend
         run: |
-          xmake build PipBoyRemote_Tests -y
-          xmake run  PipBoyRemote_Tests  -y
+          xmake build PipBoyRemote_Tests
+          xmake run  PipBoyRemote_Tests
 
       # ── Locate DLL ──────────────────────────────────────────────────────
       - name: Locate built DLL
