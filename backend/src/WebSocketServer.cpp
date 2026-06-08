@@ -4,6 +4,13 @@
 
 #include <REX/LOG.h>
 
+// <wingdi.h> (pulled in by windows.h) defines ERROR as 0, which causes
+// REX::ERROR to preprocess to REX::0 — an illegal token.  Undefine it
+// after all Windows headers have been included via PCH.h.
+#ifdef ERROR
+#    undef ERROR
+#endif
+
 namespace PipBoyRemote
 {
     // Per-connection user data stored inside each uWS WebSocket allocation.
@@ -163,7 +170,8 @@ namespace PipBoyRemote
         struct HeartbeatTimerData { uWS::App* app; WebSocketServer* self; };
         auto* hbData = new HeartbeatTimerData{ &app, this };
 
-        auto* nativeLoop = static_cast<us_loop_t*>(uWS::Loop::get()->getNativeHandle());
+        // In uWS v20, Loop inherits from us_loop_t directly; no getNativeHandle() needed.
+        auto* nativeLoop = uWS::Loop::get();
         auto* hbTimer    = us_create_timer(nativeLoop, 0, sizeof(HeartbeatTimerData*));
         *reinterpret_cast<HeartbeatTimerData**>(us_timer_ext(hbTimer)) = hbData;
 
