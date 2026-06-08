@@ -1,5 +1,6 @@
 #include "PCH.h"
 #include "WebSocketServer.h"
+#include "GameStatePoller.h"
 #include "JsonMessages.h"
 
 #include <REX/LOG.h>
@@ -275,6 +276,10 @@ namespace PipBoyRemote
             }
             const auto markerFormID = msg["markerID"].get<std::uint32_t>();
             ws->send(JsonMessages::BuildActionResponse("set_waypoint", true), uWS::OpCode::TEXT);
+
+            // Record immediately so SampleMapMarkers reflects the new waypoint on
+            // the next broadcast, even before the game-thread task executes.
+            GameStatePoller::GetSingleton().SetWaypointFormID(markerFormID);
 
             PostToGameThread(ws, "set_waypoint", [markerFormID]() {
                 auto* player = RE::PlayerCharacter::GetSingleton();

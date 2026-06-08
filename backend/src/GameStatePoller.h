@@ -34,6 +34,10 @@ namespace PipBoyRemote
         // Permanently disables sampling.
         void Stop();
 
+        // Records the FormID of the map marker the frontend most recently set as the
+        // active waypoint.  Called from the WebSocket thread; thread-safe.
+        void SetWaypointFormID(std::uint32_t formID) noexcept;
+
     private:
         GameStatePoller()  = default;
         ~GameStatePoller() = default;
@@ -57,6 +61,11 @@ namespace PipBoyRemote
 
         std::atomic<bool>        _active{ false };
         std::atomic<bool>        _registered{ false };
+
+        // FormID of the marker the frontend most recently designated as the waypoint.
+        // Written from the uWS thread (SetWaypointFormID); read on the game thread
+        // (SampleMapMarkers).  Zero means no waypoint is currently set.
+        std::atomic<std::uint32_t> _waypointFormID{ 0 };
 
         // Frame counter used to throttle sampling to roughly every 100 ms at 60 fps
         // (i.e. every 6 frames).

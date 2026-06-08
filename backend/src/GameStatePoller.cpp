@@ -138,6 +138,11 @@ namespace PipBoyRemote
         _active.store(false, std::memory_order_release);
     }
 
+    void GameStatePoller::SetWaypointFormID(std::uint32_t formID) noexcept
+    {
+        _waypointFormID.store(formID, std::memory_order_relaxed);
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // Per-frame sampling (game main thread)
     // ──────────────────────────────────────────────────────────────────────────
@@ -341,9 +346,10 @@ namespace PipBoyRemote
             snapshot.markers.push_back(std::move(marker));
         }
 
-        // activeWaypointID: reading the active compass waypoint requires walking the
-        // quest journal for the current target ref — deferred to a future iteration.
-        snapshot.activeWaypointID = 0;
+        // Report the last waypoint the frontend explicitly set.  In-game quest-marker
+        // waypoints (set through the Pip-Boy objectives screen) are not yet tracked;
+        // that requires walking the quest journal for the active objective's reference.
+        snapshot.activeWaypointID = _waypointFormID.load(std::memory_order_relaxed);
 
         WebSocketServer::GetSingleton().BroadcastMapMarkersUpdate(snapshot);
     }
