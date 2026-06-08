@@ -170,9 +170,11 @@ namespace PipBoyRemote
         struct HeartbeatTimerData { uWS::App* app; WebSocketServer* self; };
         auto* hbData = new HeartbeatTimerData{ &app, this };
 
-        // In uWS v20, Loop inherits from us_loop_t directly; no getNativeHandle() needed.
-        auto* nativeLoop = uWS::Loop::get();
-        auto* hbTimer    = us_create_timer(nativeLoop, 0, sizeof(HeartbeatTimerData*));
+        // uWS::Loop and us_loop_t share the same memory but have no C++ inheritance
+        // relationship in v20; reinterpret_cast is required (uWS uses the same cast
+        // internally when calling libuSockets functions).
+        auto* nativeLoop = reinterpret_cast<us_loop_t*>(uWS::Loop::get());
+        auto* hbTimer    = us_create_timer(nativeLoop, 0, static_cast<unsigned int>(sizeof(HeartbeatTimerData*)));
         *reinterpret_cast<HeartbeatTimerData**>(us_timer_ext(hbTimer)) = hbData;
 
         us_timer_set(
