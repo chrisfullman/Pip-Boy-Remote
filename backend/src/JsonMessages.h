@@ -25,4 +25,8 @@ namespace PipBoyRemote::JsonMessages
     // schema/action-response.schema.json
     // Sent in response to an action request from the frontend.
     std::string BuildActionResponse(std::string_view action, bool success, std::string_view errorMessage = "");
+
+    // schema/map-markers-update.schema.json
+    // Sent on worldspace entry and periodically to reflect newly-discovered locations.
+    std::string BuildMapMarkersUpdate(const MapMarkersSnapshot& snapshot);
 }

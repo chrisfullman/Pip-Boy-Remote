@@ -2,6 +2,10 @@
 
 #include <atomic>
 
+// Forward-declare the RE worldspace type so the header is not polluted with
+// game-engine includes.  GameStatePoller.cpp includes PCH.h for the full type.
+namespace RE { class TESWorldSpace; }
+
 namespace PipBoyRemote
 {
     // Singleton that schedules a recurring task on the Fallout 4 game main thread
@@ -46,6 +50,11 @@ namespace PipBoyRemote
         // Reads the player's inventory and detects changes since the last sample.
         void SampleInventory();
 
+        // Scans all BGSLocation map markers in the current worldspace and broadcasts
+        // the full list.  Only runs when the worldspace changes or a periodic rescan
+        // is due (roughly every FRAMES_PER_MARKER_RESCAN frames).
+        void SampleMapMarkers();
+
         std::atomic<bool>        _active{ false };
         std::atomic<bool>        _registered{ false };
 
@@ -57,5 +66,12 @@ namespace PipBoyRemote
         // Inventory change detection: track the cached weight as a cheap proxy.
         // A weight change triggers a full inventory re-scan.
         float                    _lastInventoryWeight{ -1.0f };
+
+        // Map marker rescan: fire a full scan on worldspace change and every
+        // FRAMES_PER_MARKER_RESCAN frames to pick up newly-discovered locations.
+        static constexpr int     FRAMES_PER_MARKER_RESCAN = 600;  // ~10 s at 60 fps
+        int                      _markerRescanCounter{ 0 };
+        bool                     _forceMapMarkerRescan{ false };
+        RE::TESWorldSpace*       _lastWorldspace{ nullptr };
     };
 }

@@ -102,6 +102,15 @@ namespace PipBoyRemote
         });
     }
 
+    void WebSocketServer::BroadcastMapMarkersUpdate(const MapMarkersSnapshot& snapshot)
+    {
+        if (!_running.load(std::memory_order_relaxed) || !_loop) { return; }
+        auto payload = JsonMessages::BuildMapMarkersUpdate(snapshot);
+        _loop->defer([this, msg = std::move(payload)]() mutable {
+            if (_publisher) { _publisher(std::move(msg)); }
+        });
+    }
+
     bool WebSocketServer::HasClients() const noexcept
     {
         return _clientCount.load(std::memory_order_relaxed) > 0;

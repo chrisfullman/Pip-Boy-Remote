@@ -20,6 +20,62 @@ namespace PipBoyRemote
         }
     }
 
+    // Maps a MARKER_TYPE value to the string key used by the frontend to load
+    // the corresponding SVG icon (e.g. "Cave" → "/maps/markers/CaveMarker.svg").
+    // Returns an empty string for types without a dedicated icon; the frontend
+    // will fall back to a plain coloured disc.
+    static std::string MarkerTypeToString(RE::MARKER_TYPE type)
+    {
+        switch (type) {
+            case RE::MARKER_TYPE::kCave:             return "Cave";
+            case RE::MARKER_TYPE::kCity:             return "City";
+            case RE::MARKER_TYPE::kDiamondCity:      return "DiamondCity";
+            case RE::MARKER_TYPE::kEncampment:       return "Encampment";
+            case RE::MARKER_TYPE::kIndustrial:       return "Industrial";
+            case RE::MARKER_TYPE::kGovtBuilding:     return "GovtBuilding";
+            case RE::MARKER_TYPE::kMetro:            return "Metro";
+            case RE::MARKER_TYPE::kMilitaryBase:     return "MilitaryBase";
+            case RE::MARKER_TYPE::kLandmark:         return "Landmark";
+            case RE::MARKER_TYPE::kOffice:           return "Office";
+            case RE::MARKER_TYPE::kRuinsTown:        return "RuinsTown";
+            case RE::MARKER_TYPE::kRuinsUrban:       return "RuinsUrban";
+            case RE::MARKER_TYPE::kSanctuary:        return "Sanctuary";
+            case RE::MARKER_TYPE::kSettlement:       return "Settlement";
+            case RE::MARKER_TYPE::kSewer:            return "Sewer";
+            case RE::MARKER_TYPE::kVault:            return "Vault";
+            case RE::MARKER_TYPE::kAirfield:         return "Airfield";
+            case RE::MARKER_TYPE::kBunkerHill:       return "BunkerHill";
+            case RE::MARKER_TYPE::kChurch:           return "Church";
+            case RE::MARKER_TYPE::kFarm:             return "Farm";
+            case RE::MARKER_TYPE::kFillingStation:   return "FillingStation";
+            case RE::MARKER_TYPE::kForest:           return "Forest";
+            case RE::MARKER_TYPE::kGoodNeighbor:     return "GoodNeighbor";
+            case RE::MARKER_TYPE::kGraveyard:        return "Graveyard";
+            case RE::MARKER_TYPE::kHospital:         return "Hospital";
+            case RE::MARKER_TYPE::kInstitute:        return "Institute";
+            case RE::MARKER_TYPE::kJunkyard:         return "Junkyard";
+            case RE::MARKER_TYPE::kObservatory:      return "Observatory";
+            case RE::MARKER_TYPE::kPier:             return "Pier";
+            case RE::MARKER_TYPE::kQuarry:           return "Quarry";
+            case RE::MARKER_TYPE::kRadioTower:       return "RadioTower";
+            case RE::MARKER_TYPE::kSalem:            return "Salem";
+            case RE::MARKER_TYPE::kSchool:           return "School";
+            case RE::MARKER_TYPE::kShipwreck:        return "Shipwreck";
+            case RE::MARKER_TYPE::kSubmarine:        return "Submarine";
+            case RE::MARKER_TYPE::kTown:             return "Town";
+            case RE::MARKER_TYPE::kBOS:              return "BOS";
+            case RE::MARKER_TYPE::kBunker:           return "Bunker";
+            case RE::MARKER_TYPE::kCastle:           return "Castle";
+            case RE::MARKER_TYPE::kMinutemen:        return "Minutemen";
+            case RE::MARKER_TYPE::kPoliceStation:    return "PoliceStation";
+            case RE::MARKER_TYPE::kPrydwen:          return "Prydwen";
+            case RE::MARKER_TYPE::kRailroadFaction:  return "RailroadFaction";
+            case RE::MARKER_TYPE::kRailroad:         return "Railroad";
+            case RE::MARKER_TYPE::kUSSConstitution:  return "USSConstitution";
+            default:                                  return "";
+        }
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // Singleton
     // ──────────────────────────────────────────────────────────────────────────
@@ -54,6 +110,9 @@ namespace PipBoyRemote
     {
         _frameCount           = 0;
         _lastInventoryWeight  = -1.0f;  // force an inventory scan on the first frame
+        _markerRescanCounter  = 0;
+        _forceMapMarkerRescan = true;   // force a marker scan on the first active frame
+        _lastWorldspace       = nullptr;
         _active.store(true, std::memory_order_release);
     }
 
@@ -87,6 +146,14 @@ namespace PipBoyRemote
 
         SamplePlayerState();
         SampleInventory();
+
+        // Increment the marker rescan counter; flag a forced rescan when it expires.
+        ++_markerRescanCounter;
+        if (_markerRescanCounter >= FRAMES_PER_MARKER_RESCAN) {
+            _markerRescanCounter  = 0;
+            _forceMapMarkerRescan = true;
+        }
+        SampleMapMarkers();
     }
 
     void GameStatePoller::SamplePlayerState()
@@ -192,5 +259,77 @@ namespace PipBoyRemote
         );
 
         WebSocketServer::GetSingleton().BroadcastInventoryUpdate(snapshot);
+    }
+
+    void GameStatePoller::SampleMapMarkers()
+    {
+        auto* player = RE::PlayerCharacter::GetSingleton();
+        if (!player) { return; }
+
+        // Determine the player's current worldspace.  Interior cells have no worldspace.
+        RE::TESWorldSpace* currentWorldspace = nullptr;
+        const auto* playerCell = player->GetParentCell();
+        if (playerCell && playerCell->IsExterior()) {
+            currentWorldspace = playerCell->worldSpace;
+        }
+
+        // Only rescan when the worldspace changes or a periodic rescan is due.
+        if (currentWorldspace == _lastWorldspace && !_forceMapMarkerRescan) { return; }
+        _lastWorldspace       = currentWorldspace;
+        _forceMapMarkerRescan = false;
+
+        auto* dataHandler = RE::TESDataHandler::GetSingleton();
+        if (!dataHandler) { return; }
+
+        MapMarkersSnapshot snapshot;
+
+        if (currentWorldspace) {
+            snapshot.worldspace = currentWorldspace->editorID.c_str();
+        }
+
+        // MapMarkerData::flags bit definitions (RE'd from game binary):
+        //   0x01 = kVisible — marker is shown on the player's map (= discovered)
+        //   0x02 = kCanTravelTo — player can fast travel to this location
+        static constexpr std::uint8_t FLAG_VISIBLE     = 0x01;
+        static constexpr std::uint8_t FLAG_CAN_TRAVEL  = 0x02;
+
+        // Iterate all BGSLocation forms.  Each named location optionally carries a
+        // worldLocMarker handle pointing to the TESObjectREFR that has the visible
+        // map marker pin and its MapMarkerData extra data.
+        for (auto* loc : dataHandler->GetFormArray<RE::BGSLocation>()) {
+            if (!loc) { continue; }
+
+            // Resolve the handle to a live reference; skip invalid/unloaded handles.
+            const RE::NiPointer<RE::TESObjectREFR> markerRef = loc->worldLocMarker.get();
+            if (!markerRef) { continue; }
+
+            // Skip markers that are not in the current worldspace.
+            const auto* cell = markerRef->GetParentCell();
+            if (!cell || !cell->IsExterior() || cell->worldSpace != currentWorldspace) { continue; }
+
+            // Get the map marker extra data attached to the reference.
+            if (!markerRef->extraList) { continue; }
+            const auto* extra = markerRef->extraList->GetByType<RE::ExtraMapMarker>();
+            if (!extra || !extra->mapMarkerData) { continue; }
+
+            const auto* mapData = extra->mapMarkerData;
+
+            MapMarker marker;
+            marker.formID           = markerRef->GetFormID();
+            marker.name             = mapData->GetFullName();
+            marker.x                = markerRef->GetPositionX();
+            marker.y                = markerRef->GetPositionY();
+            marker.isDiscovered     = (mapData->flags & FLAG_VISIBLE)    != 0;
+            marker.isFastTravelable = (mapData->flags & FLAG_CAN_TRAVEL) != 0;
+            marker.markerType       = MarkerTypeToString(mapData->type);
+
+            snapshot.markers.push_back(std::move(marker));
+        }
+
+        // activeWaypointID: reading the active compass waypoint requires walking the
+        // quest journal for the current target ref — deferred to a future iteration.
+        snapshot.activeWaypointID = 0;
+
+        WebSocketServer::GetSingleton().BroadcastMapMarkersUpdate(snapshot);
     }
 }

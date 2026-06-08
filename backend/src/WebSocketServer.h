@@ -44,6 +44,10 @@ namespace PipBoyRemote
         // Thread-safe.
         void BroadcastInventoryUpdate(const InventorySnapshot& snapshot);
 
+        // Serialise and broadcast a map markers snapshot to all connected clients.
+        // Thread-safe.
+        void BroadcastMapMarkersUpdate(const MapMarkersSnapshot& snapshot);
+
         // Returns true when at least one WebSocket client is currently connected.
         [[nodiscard]] bool HasClients() const noexcept;
 

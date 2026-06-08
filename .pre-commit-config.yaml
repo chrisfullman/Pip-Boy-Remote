@@ -1,0 +1,32 @@
+repos:
+  # ── C++ formatting (clang-format) ────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v19.1.7
+    hooks:
+      - id: clang-format
+        name: clang-format (C++ backend)
+        types_or: [c, c++]
+        args: [--style=file, --dry-run, --Werror]
+
+  # ── Frontend formatting (prettier) ───────────────────────────────────────────
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        name: prettier (frontend TS/Vue)
+        files: ^frontend/
+        types_or: [ts, vue, javascript]
+
+  # ── General hygiene ───────────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: \.md$
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+        exclude: ^frontend/tsconfig\.json$  # tsconfig allows comments via VS Code
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]

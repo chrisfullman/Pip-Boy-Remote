@@ -115,4 +115,35 @@ namespace PipBoyRemote::JsonMessages
         }
         return msg.dump();
     }
+
+    std::string BuildMapMarkersUpdate(const MapMarkersSnapshot& snapshot)
+    {
+        nlohmann::json markers = nlohmann::json::array();
+        for (const auto& m : snapshot.markers) {
+            nlohmann::json entry = {
+                { "formID",          m.formID           },
+                { "name",            m.name             },
+                { "coords",          { m.x, m.y }       },
+                { "isDiscovered",    m.isDiscovered      },
+                { "isFastTravelable", m.isFastTravelable },
+            };
+            if (!m.markerType.empty()) {
+                entry["markerType"] = m.markerType;
+            }
+            markers.push_back(std::move(entry));
+        }
+
+        nlohmann::json msg = {
+            { "type",      "map_markers_update" },
+            { "timestamp", CurrentTimestamp()   },
+            { "markers",   std::move(markers)   },
+        };
+        if (!snapshot.worldspace.empty()) {
+            msg["worldspace"] = snapshot.worldspace;
+        }
+        if (snapshot.activeWaypointID != 0) {
+            msg["activeWaypointID"] = snapshot.activeWaypointID;
+        }
+        return msg.dump();
+    }
 }

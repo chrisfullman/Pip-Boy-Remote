@@ -35,10 +35,14 @@ export const usePreferencesStore = defineStore('preferences', () => {
   const darkMode = ref(saved.darkMode)
 
   function persist() {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ host: host.value, port: port.value, darkMode: darkMode.value }),
-    )
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ host: host.value, port: port.value, darkMode: darkMode.value }),
+      )
+    } catch {
+      // localStorage may be unavailable (private browsing, test environments, SSR).
+    }
   }
 
   watch([host, port, darkMode], persist)

@@ -80,4 +80,25 @@ namespace PipBoyRemote
     {
         std::vector<InventoryItem> items;
     };
+
+    // A single discoverable location shown on the world map.
+    struct MapMarker
+    {
+        std::uint32_t formID            = 0;
+        std::string   name;
+        float         x                = 0.0f;
+        float         y                = 0.0f;
+        bool          isDiscovered     = false;  // player has visited; shown on map
+        bool          isFastTravelable = false;  // player can fast travel here
+        std::string   markerType;                // frontend icon key, e.g. "Cave", "Settlement"
+    };
+
+    // Complete snapshot of map markers for a worldspace.
+    // Written by GameStatePoller on the game thread; read by WebSocketServer.
+    struct MapMarkersSnapshot
+    {
+        std::vector<MapMarker> markers;
+        std::string            worldspace;             // worldspace editor ID, e.g. "Commonwealth"
+        std::uint32_t          activeWaypointID = 0;   // form ID of active waypoint; 0 if none
+    };
 }

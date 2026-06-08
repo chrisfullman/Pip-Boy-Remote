@@ -34,13 +34,11 @@ the mod ZIP, the contribution/style docs the spec requires, and general polish.
 **Backend TODOs:**
 - `nextLevelXP` — always emitted as `0.0f`.  Formula requires reading `iXPBase` and
   `fXPLevelUpMult` GMSTs from the game.  Frontend treats `0` as "unavailable" (hides XP bar).
-- **Map markers** — `map_markers_update` message is not yet broadcast.  The frontend and
-  schema are fully ready; the backend needs:
-  1. `MapMarker` struct added to `GameState.h`
-  2. `BuildMapMarkersUpdate()` added to `JsonMessages`
-  3. `SampleMapMarkers()` added to `GameStatePoller` — scan the game's map marker list via
-     `RE::TESDataHandler` / `RE::MapMarker` form type; emit on connect and when the
-     player's discovered-location set changes
+- **Map markers** — ✅ Complete (2026-06-08).  `MapMarker`/`MapMarkersSnapshot` in `GameState.h`,
+  `BuildMapMarkersUpdate()` in `JsonMessages`, `SampleMapMarkers()` in `GameStatePoller`.
+  Scans `RE::TESDataHandler::GetFormArray<RE::BGSLocation>()`, resolves `worldLocMarker`
+  handles, reads `ExtraMapMarker::mapMarkerData`.  Rescans on worldspace change and every
+  ~10 s (600 frames) for newly-discovered locations.  `activeWaypointID` deferred (P3).
 
 ### Frontend (`frontend/`)
 
@@ -64,9 +62,9 @@ the mod ZIP, the contribution/style docs the spec requires, and general polish.
 | `tsconfig.json` | ✅ Complete | Added `skipLibCheck: true` to suppress Vite/Vitest node type noise |
 
 **Frontend TODOs:**
-- **Vue component tests** — no component-level tests exist yet.  `@vue/test-utils` is
-  already installed.  Priority areas: ConnectionBanner (connect/disconnect flow),
-  InventoryList (filter/action buttons).
+- **Vue component tests** — ✅ Complete (2026-06-08).  `ConnectionBanner` (14 tests: status display,
+  input state, button rendering, connect/disconnect flow) and `InventoryList` (20 tests: empty state,
+  rendering, tab/search filtering, action buttons) added in `test/`.  Total: 59 tests, all passing.
 - **MapView coordinate calibration** — world bounds are approximate (±130 000 / ±60 000).
   Once real in-game positions are tested, update the `WORLDSPACES` constants in `MapView.vue`.
 
@@ -75,13 +73,12 @@ the mod ZIP, the contribution/style docs the spec requires, and general polish.
 | File | Status | Notes |
 |------|--------|-------|
 | `replay.js` | ✅ Complete | Synthetic mode + file replay; 10 fps; loops; speed multiplier |
-| `package-mod.sh` | ⚠️ Incomplete | Packages DLL + INI only. **Does not build or include the frontend.** Must add `npm ci && npm run build` and copy `frontend/dist/` into `Data/F4SE/Plugins/PipBoyRemote/`. |
+| `package-mod.sh` | ✅ Complete | Builds frontend with `npm ci && npm run build` (skippable via `PIPBOY_SKIP_FRONTEND_BUILD=1`), copies `frontend/dist/` to `Data/F4SE/Plugins/PipBoyRemote/` inside the ZIP. |
 | `download-assets.sh` | ✅ Complete | Downloads 3 map images + 73 SVG markers from Mappalachia |
 
-**Scripts TODO:**
-- Sample log file (`logs/sample.jsonl`) — replay.js has no recorded data to replay.
-  Generate one with representative messages (heartbeat, state_update with movement,
-  inventory_update with mixed categories, a couple of map markers).
+**Scripts TODO:** ✅ Sample log file `logs/sample.jsonl` added (2026-06-08) — 8 messages covering
+heartbeat, player movement, inventory with 6 item categories, map markers for Commonwealth,
+and level-up (experience gained).  Use with `node scripts/replay.js --loop logs/sample.jsonl`.
 
 ### Schemas (`schema/`)
 
@@ -98,7 +95,7 @@ All 5 schemas complete: `heartbeat`, `state_update`, `inventory_update`,
 | Backend unit tests | ✅ | |
 | Locate DLL + assemble ZIP | ✅ | |
 | Upload artifacts + GitHub Release | ✅ | |
-| **Frontend build** | ❌ Missing | No `npm ci && npm run build` step; frontend dist is not in the ZIP |
+| **Frontend build** | ✅ Complete | Node.js 20 setup → `npm ci` → `npm run build`; script uses `PIPBOY_SKIP_FRONTEND_BUILD=1` |
 
 ### Documentation (`docs/`, root)
 
@@ -107,38 +104,33 @@ All 5 schemas complete: `heartbeat`, `state_update`, `inventory_update`,
 | `README.md` | ✅ Complete |
 | `docs/example.ini` | ✅ Complete |
 | `docs/ASSETS.md` | ✅ Complete (Mappalachia GPL-3.0 attribution) |
-| `docs/packaging.md` | ❌ Missing (referenced by README) |
-| `CONTRIBUTING.md` | ❌ Missing (required by spec) |
-| `CODE_STYLE.md` | ❌ Missing (required by spec) |
-| `CHANGELOG.md` | ❌ Missing (required by spec) |
-| Pre-commit hooks | ❌ Missing (required by spec) |
+| `docs/packaging.md` | ✅ Complete (2026-06-08) |
+| `CONTRIBUTING.md` | ✅ Complete (2026-06-08) |
+| `CODE_STYLE.md` | ✅ Complete (2026-06-08) |
+| `CHANGELOG.md` | ✅ Complete (2026-06-08) |
+| `.clang-format` | ✅ Complete (2026-06-08) |
+| `frontend/.prettierrc` | ✅ Complete (2026-06-08) |
+| `.pre-commit-config.yaml` | ✅ Complete (2026-06-08) |
 
 ---
 
 ## Prioritised next steps
 
-### P0 — Breaks the actual product
-1. **`package-mod.sh` + CI: add frontend build.**
-   - In `package-mod.sh`: run `npm ci && npm run build` in `frontend/`, then copy
-     `frontend/dist/` to `Data/F4SE/Plugins/PipBoyRemote/` inside the ZIP.
-   - In the CI workflow: add a Node.js setup step and a frontend build step before
-     the "Assemble installable mod package" step.
+### P0 — ✅ Done (2026-06-08)
+- `package-mod.sh` + CI frontend build step: complete.
 
-### P1 — Core feature still missing
-2. **Backend: map markers** — Implement `SampleMapMarkers()` in `GameStatePoller`.
-   The frontend/schema side is fully ready; only the backend is missing.
+### P1 — ✅ Done (2026-06-08)
+- Backend map markers: complete.
 
-### P2 — Required by project spec (CLAUDE.md)
-3. `CONTRIBUTING.md`
-4. `CODE_STYLE.md` + pre-commit hooks (`clang-format` for C++, `prettier` for frontend)
-5. `CHANGELOG.md`
-6. `docs/packaging.md`
+### P2 — ✅ Done (2026-06-08)
+- `CONTRIBUTING.md`, `CODE_STYLE.md`, `CHANGELOG.md`, `docs/packaging.md`,
+  `.clang-format`, `frontend/.prettierrc`, `.pre-commit-config.yaml`: all complete.
 
-### P3 — Quality / developer experience
-7. Vue component tests (`ConnectionBanner`, `InventoryList`)
-8. Sample log file `logs/sample.jsonl` for offline replay development
-9. `nextLevelXP` formula (research `iXPBase` + `fXPLevelUpMult` GMSTs)
-10. MapView coordinate calibration (requires real game session)
+### P3 — Partially done
+- ✅ Vue component tests (59 total, all passing) — 2026-06-08
+- ✅ `logs/sample.jsonl` — 2026-06-08
+- ⏳ `nextLevelXP` formula — requires confirming GMST names in a live game session
+- ⏳ MapView coordinate calibration — requires real in-game position testing
 
 ---
 

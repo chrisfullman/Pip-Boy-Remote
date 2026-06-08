@@ -18,6 +18,7 @@
 #       Plugins/
 #         PipBoyRemote.dll
 #         PipBoyRemote.ini
+#         PipBoyRemote/       <- frontend web app (index.html + assets/)
 
 set -euo pipefail
 
@@ -27,11 +28,27 @@ MINGW_PREFIX="${3:-}"
 
 PACKAGE_ROOT="${OUTPUT_DIR}/package"
 PLUGINS_DIR="${PACKAGE_ROOT}/Data/F4SE/Plugins"
+WEB_DIR="${PLUGINS_DIR}/PipBoyRemote"
+
+# Set PIPBOY_SKIP_FRONTEND_BUILD=1 to skip this step when the frontend has
+# already been built by a prior CI step or manual invocation.
+if [[ "${PIPBOY_SKIP_FRONTEND_BUILD:-0}" == "1" ]]; then
+    echo "==> Skipping frontend build (PIPBOY_SKIP_FRONTEND_BUILD=1)"
+else
+    echo "==> Building frontend"
+    (
+        cd frontend
+        npm ci --prefer-offline
+        npm run build
+    )
+    echo "    Frontend build complete -> frontend/dist/"
+fi
 
 echo "==> Assembling mod package"
 
 rm -rf "${PACKAGE_ROOT}"
 mkdir -p "${PLUGINS_DIR}"
+mkdir -p "${WEB_DIR}"
 
 # Copy DLL
 if [[ ! -f "${DLL_PATH}" ]]; then
@@ -46,6 +63,15 @@ if [[ -f "docs/example.ini" ]]; then
     cp "docs/example.ini" "${PLUGINS_DIR}/PipBoyRemote.ini"
     echo "    Copied docs/example.ini -> ${PLUGINS_DIR}/PipBoyRemote.ini"
 fi
+
+# Copy frontend web app (built by Vite into frontend/dist/)
+FRONTEND_DIST="frontend/dist"
+if [[ ! -d "${FRONTEND_DIST}" ]]; then
+    echo "ERROR: frontend/dist/ not found — did the Vite build succeed?" >&2
+    exit 1
+fi
+cp -r "${FRONTEND_DIST}/." "${WEB_DIR}/"
+echo "    Copied ${FRONTEND_DIST}/ -> ${WEB_DIR}/"
 
 # Optional: copy MinGW runtime DLLs for experimental cross-compiled builds
 if [[ -n "${MINGW_PREFIX}" ]]; then

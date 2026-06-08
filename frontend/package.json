@@ -7,7 +7,9 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "prettier --check \"src/**/*.{ts,vue}\" \"test/**/*.ts\"",
+    "lint:fix": "prettier --write \"src/**/*.{ts,vue}\" \"test/**/*.ts\""
   },
   "dependencies": {
     "ajv": "^8.17.1",
@@ -19,6 +21,7 @@
     "@vitejs/plugin-vue": "^5.2.3",
     "@vue/test-utils": "^2.4.6",
     "jsdom": "^26.1.0",
+    "prettier": "^3.4.2",
     "typescript": "^5.8.2",
     "vite": "^6.3.4",
     "vitest": "^3.1.1",
