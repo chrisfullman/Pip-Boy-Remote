@@ -1,0 +1,85 @@
+name: Build and Package Fallout 4 Mod
+
+on:
+  push:
+    branches: [main]
+    tags:     ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build (MSVC / Windows x64)
+    runs-on: windows-latest
+
+    steps:
+      # ── Checkout ────────────────────────────────────────────────────────────
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive   # initialises backend/commonlibf4 and its deps
+
+      # ── Toolchain ───────────────────────────────────────────────────────────
+      - name: Set up MSVC developer environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      # ── XMake ───────────────────────────────────────────────────────────────
+      - name: Install XMake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
+
+      # ── Build backend plugin ─────────────────────────────────────────────
+      - name: Configure and build PipBoyRemote.dll
+        working-directory: backend
+        run: |
+          xmake config --plat=windows --arch=x64 --mode=release -y
+          xmake build PipBoyRemote -y
+
+      # ── Run unit tests ───────────────────────────────────────────────────
+      - name: Build and run unit tests
+        working-directory: backend
+        run: |
+          xmake build PipBoyRemote_Tests -y
+          xmake run  PipBoyRemote_Tests  -y
+
+      # ── Locate DLL ──────────────────────────────────────────────────────
+      - name: Locate built DLL
+        id: dll
+        shell: bash
+        run: |
+          dll=$(find backend/build -name "PipBoyRemote.dll" | head -1)
+          if [[ -z "$dll" ]]; then echo "DLL not found" >&2; exit 1; fi
+          echo "path=$dll" >> "$GITHUB_OUTPUT"
+
+      # ── Package mod ZIP ─────────────────────────────────────────────────
+      - name: Assemble installable mod package
+        shell: bash
+        run: |
+          bash scripts/package-mod.sh "${{ steps.dll.outputs.path }}" build
+
+      # ── Upload artifacts ─────────────────────────────────────────────────
+      - name: Upload PipBoyRemote.dll
+        uses: actions/upload-artifact@v4
+        with:
+          name: PipBoyRemote-dll
+          path: ${{ steps.dll.outputs.path }}
+          if-no-files-found: error
+
+      - name: Upload installable mod ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: PipBoyRemote-mod
+          path: build/PipBoyRemote-mod.zip
+          if-no-files-found: error
+
+      # ── Release (on tag push only) ───────────────────────────────────────
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/PipBoyRemote-mod.zip
+          generate_release_notes: true

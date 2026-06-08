@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pipboy-remote/schemas/action.json",
+  "title": "Action",
+  "description": "Messages sent from the frontend to the backend to trigger in-game actions.",
+  "oneOf": [
+    {
+      "title": "SetWaypoint",
+      "description": "Sets a compass waypoint on an exterior map marker without fast-travelling.",
+      "type": "object",
+      "properties": {
+        "action":   { "const": "set_waypoint" },
+        "markerID": { "type": "integer", "description": "Form ID of the TESObjectREFR map marker." }
+      },
+      "required": ["action", "markerID"],
+      "additionalProperties": false
+    },
+    {
+      "title": "FastTravel",
+      "description": "Fast-travels to an exterior map marker (only available when fast travel is allowed).",
+      "type": "object",
+      "properties": {
+        "action":   { "const": "fast_travel" },
+        "markerID": { "type": "integer" }
+      },
+      "required": ["action", "markerID"],
+      "additionalProperties": false
+    },
+    {
+      "title": "Equip",
+      "description": "Equips a weapon or piece of armor from the player's inventory.",
+      "type": "object",
+      "properties": {
+        "action": { "const": "equip" },
+        "formID": { "type": "integer", "description": "Form ID of the TESBoundObject to equip." }
+      },
+      "required": ["action", "formID"],
+      "additionalProperties": false
+    },
+    {
+      "title": "Unequip",
+      "description": "Unequips a weapon or piece of armor.",
+      "type": "object",
+      "properties": {
+        "action": { "const": "unequip" },
+        "formID": { "type": "integer" }
+      },
+      "required": ["action", "formID"],
+      "additionalProperties": false
+    },
+    {
+      "title": "Consume",
+      "description": "Consumes a food, drink, or medicine item from the player's inventory.",
+      "type": "object",
+      "properties": {
+        "action": { "const": "consume" },
+        "formID": { "type": "integer", "description": "Form ID of the AlchemyItem to consume." }
+      },
+      "required": ["action", "formID"],
+      "additionalProperties": false
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pipboy-remote/schemas/state-update.json",
+  "title": "StateUpdate",
+  "description": "Player vitals, world position, and limb conditions. Emitted ~10 times per second when a client is connected.",
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "state_update"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "player": {
+      "type": "object",
+      "properties": {
+        "health": {
+          "type": "number",
+          "description": "Current HP."
+        },
+        "maxHealth": {
+          "type": "number",
+          "description": "Maximum HP (base, before modifiers)."
+        },
+        "actionPoints": {
+          "type": "number",
+          "description": "Current AP."
+        },
+        "maxActionPoints": {
+          "type": "number",
+          "description": "Maximum AP."
+        },
+        "currentWeight": {
+          "type": "number",
+          "description": "Total weight of items currently carried."
+        },
+        "maxCarryWeight": {
+          "type": "number",
+          "description": "Carry weight capacity."
+        },
+        "coords": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "[x, y, z] world coordinates in Fallout 4 units."
+        },
+        "level": {
+          "type": "number"
+        },
+        "experience": {
+          "type": "number"
+        },
+        "nextLevelXP": {
+          "type": "number"
+        },
+        "condition": {
+          "type": "object",
+          "properties": {
+            "head":      { "type": "number", "minimum": 0, "maximum": 100 },
+            "torso":     { "type": "number", "minimum": 0, "maximum": 100 },
+            "leftArm":   { "type": "number", "minimum": 0, "maximum": 100 },
+            "rightArm":  { "type": "number", "minimum": 0, "maximum": 100 },
+            "leftLeg":   { "type": "number", "minimum": 0, "maximum": 100 },
+            "rightLeg":  { "type": "number", "minimum": 0, "maximum": 100 },
+            "powerArmor": {
+              "type": "object",
+              "description": "Power-armor piece conditions. Values are 100 when the player is not wearing power armor.",
+              "properties": {
+                "head":      { "type": "number", "minimum": 0, "maximum": 100 },
+                "torso":     { "type": "number", "minimum": 0, "maximum": 100 },
+                "leftArm":   { "type": "number", "minimum": 0, "maximum": 100 },
+                "rightArm":  { "type": "number", "minimum": 0, "maximum": 100 },
+                "leftLeg":   { "type": "number", "minimum": 0, "maximum": 100 },
+                "rightLeg":  { "type": "number", "minimum": 0, "maximum": 100 }
+              },
+              "required": ["head", "torso", "leftArm", "rightArm", "leftLeg", "rightLeg"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["head", "torso", "leftArm", "rightArm", "leftLeg", "rightLeg", "powerArmor"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["health", "maxHealth", "actionPoints", "maxActionPoints", "currentWeight", "maxCarryWeight", "coords", "condition"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["type", "timestamp", "player"],
+  "additionalProperties": false
+}

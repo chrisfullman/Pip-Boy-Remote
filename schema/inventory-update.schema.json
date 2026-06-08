@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pipboy-remote/schemas/inventory-update.json",
+  "title": "InventoryUpdate",
+  "description": "Full inventory snapshot emitted when the player's carried items change.",
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "inventory_update"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "formID": {
+            "type": "integer",
+            "description": "Fallout 4 form ID (decimal) uniquely identifying the base item."
+          },
+          "name": {
+            "type": "string",
+            "description": "Localised display name."
+          },
+          "category": {
+            "type": "integer",
+            "enum": [0, 1, 2, 3, 4, 255],
+            "description": "0=Weapon, 1=Armor, 2=Aid, 3=Ammo, 4=Misc, 255=Other"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "isEquipped": {
+            "type": "boolean"
+          },
+          "weight": {
+            "type": "number",
+            "minimum": 0
+          },
+          "value": {
+            "type": "integer",
+            "description": "Base game value in caps."
+          }
+        },
+        "required": ["formID", "name", "category", "count", "isEquipped", "weight", "value"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["type", "timestamp", "items"],
+  "additionalProperties": false
+}

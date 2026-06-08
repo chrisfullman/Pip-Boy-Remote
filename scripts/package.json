@@ -1,0 +1,13 @@
+{
+  "name": "pip-boy-remote-scripts",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Dev helper scripts for Pip-Boy Remote",
+  "scripts": {
+    "replay": "node replay.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.2"
+  }
+}

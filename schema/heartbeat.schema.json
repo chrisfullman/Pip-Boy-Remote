@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pipboy-remote/schemas/heartbeat.json",
+  "title": "Heartbeat",
+  "description": "Periodically emitted by the server to confirm the WebSocket connection is alive.",
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "heartbeat"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp of when this heartbeat was generated (ISO 8601)."
+    },
+    "connected": {
+      "type": "boolean",
+      "description": "True when at least one WebSocket client is currently open."
+    }
+  },
+  "required": ["type", "timestamp", "connected"],
+  "additionalProperties": false
+}

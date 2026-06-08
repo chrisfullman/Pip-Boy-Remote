@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pipboy-remote/schemas/map-markers-update.json",
+  "title": "MapMarkersUpdate",
+  "description": "Sent when the player's known map markers or active compass waypoint changes.",
+  "type": "object",
+  "properties": {
+    "type": { "const": "map_markers_update" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "worldspace": {
+      "type": "string",
+      "description": "Fallout 4 worldspace editor ID, e.g. 'Commonwealth', 'DLC03FarHarbor', 'NukaWorld'."
+    },
+    "markers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/MapMarker" }
+    },
+    "activeWaypointID": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "FormID of the active compass waypoint marker; omitted when no waypoint is set."
+    }
+  },
+  "required": ["type", "timestamp", "markers"],
+  "additionalProperties": false,
+  "$defs": {
+    "MapMarker": {
+      "type": "object",
+      "properties": {
+        "formID":           { "type": "integer", "minimum": 0 },
+        "name":             { "type": "string",  "minLength": 1 },
+        "coords": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[x, y] world-space coordinates."
+        },
+        "isDiscovered":      { "type": "boolean" },
+        "isFastTravelable":  { "type": "boolean" },
+        "markerType": {
+          "type": "string",
+          "description": "Icon type prefix matching a file in maps/markers/, e.g. 'Vault' -> VaultMarker.svg."
+        }
+      },
+      "required": ["formID", "name", "coords", "isDiscovered", "isFastTravelable"],
+      "additionalProperties": false
+    }
+  }
+}

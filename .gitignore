@@ -1,0 +1,30 @@
+# Build artifacts
+backend/build/
+backend/build-test/
+backend/build-test2/
+backend/build-windows/
+build/
+
+# XMake local config and cache
+.xmake/
+backend/.xmake/
+
+# XMake-generated VS project files
+backend/vsxmake*/
+
+# OS/editor files
+.DS_Store
+
+# Frontend dependencies / cache
+frontend/node_modules/
+frontend/.vite/
+scripts/node_modules/
+
+# Replay / dev logs
+logs/*.jsonl
+logs/*.log
+
+# Third-party map assets (downloaded by scripts/download-assets.sh)
+# These are GPL-3.0 assets from Mappalachia/Commonwealth_Cartography —
+# run the script to fetch them before starting the dev server.
+frontend/public/maps/

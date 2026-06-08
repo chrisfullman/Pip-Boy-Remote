@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pipboy-remote/schemas/action-response.json",
+  "title": "ActionResponse",
+  "description": "Sent by the server in response to every action message from the frontend.",
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "action_response"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "action": {
+      "type": "string",
+      "description": "Echoes the 'action' field from the request."
+    },
+    "success": {
+      "type": "boolean"
+    },
+    "error": {
+      "type": "string",
+      "description": "Human-readable error description. Present only when success=false."
+    }
+  },
+  "required": ["type", "timestamp", "action", "success"],
+  "additionalProperties": false
+}
