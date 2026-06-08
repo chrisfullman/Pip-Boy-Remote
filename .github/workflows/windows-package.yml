@@ -12,6 +12,10 @@ jobs:
   build:
     name: Build (MSVC / Windows x64)
     runs-on: windows-latest
+    env:
+      # Opt into Node.js 24 now; GitHub Actions will force Node.js 24 as default
+      # starting 2026-06-16 (Node.js 20 removed from runners 2026-09-16).
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
     steps:
       # ── Checkout ────────────────────────────────────────────────────────────
