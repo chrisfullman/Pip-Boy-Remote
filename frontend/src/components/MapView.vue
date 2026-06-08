@@ -118,6 +118,17 @@ function clampZoom(z: number): number {
   return Math.min(minZoom() * MAX_ZOOM_FACTOR, Math.max(minZoom(), z))
 }
 
+// ── Selected marker ────────────────────────────────────────────────────────────
+// Declared here (before fitToWorld and the immediate watcher below) to avoid
+// a temporal dead zone: the watcher fires during setup and calls fitToWorld(),
+// which writes selectedMarker.value before the original declaration site.
+const selectedMarker = ref<MapMarker | null>(null)
+
+// ── Draw scheduling ────────────────────────────────────────────────────────────
+// rafPending must also precede fitToWorld() for the same reason: requestDraw()
+// reads it synchronously during the immediate watcher's first invocation.
+let rafPending = false
+
 // Initialise or re-initialise the viewport to fit the full worldspace.
 function fitToWorld(): void {
   const w = ws()
@@ -133,9 +144,6 @@ watch(activeWorldspace, () => {
   getMapImage(activeWorldspace.value)
   fitToWorld()
 }, { immediate: true })
-
-// ── Selected marker ────────────────────────────────────────────────────────────
-const selectedMarker = ref<MapMarker | null>(null)
 
 // ── Coordinate transforms ──────────────────────────────────────────────────────
 // FO4 Y increases northward; canvas Y increases downward → invert.
@@ -161,7 +169,6 @@ function clientToCanvas(e: { clientX: number; clientY: number }): [number, numbe
 }
 
 // ── Render ─────────────────────────────────────────────────────────────────────
-let rafPending = false
 
 function requestDraw(): void {
   if (rafPending) return
