@@ -1,0 +1,3 @@
+[submodule "backend/commonlibf4"]
+	path = backend/commonlibf4
+	url = https://github.com/libxse/commonlibf4.git
