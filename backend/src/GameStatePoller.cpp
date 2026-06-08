@@ -5,6 +5,13 @@
 
 #include <REX/LOG.h>
 
+// <wingdi.h> (pulled in by windows.h) defines ERROR as 0, which causes
+// REX::ERROR to preprocess to REX::0 — an illegal token.  Undefine it
+// after all Windows headers have been included via PCH.h.
+#ifdef ERROR
+#    undef ERROR
+#endif
+
 namespace PipBoyRemote
 {
     // Maps a Fallout 4 form type to our ItemCategory enum.
@@ -314,14 +321,22 @@ namespace PipBoyRemote
 
             const auto* mapData = extra->mapMarkerData;
 
+            // MapMarkerData::flags and ::type are private (no public accessors).
+            // Read them directly at their documented byte offsets from the RE'd header:
+            //   0x10 = flags (uint8_t), 0x12 = type (MARKER_TYPE / uint32_t).
+            const auto* mapDataBytes    = reinterpret_cast<const std::byte*>(mapData);
+            const auto  rawFlags        = *reinterpret_cast<const std::uint8_t*>(mapDataBytes + 0x10);
+            RE::MARKER_TYPE rawType{};
+            std::memcpy(&rawType, mapDataBytes + 0x12, sizeof(rawType));
+
             MapMarker marker;
             marker.formID           = markerRef->GetFormID();
             marker.name             = mapData->GetFullName();
             marker.x                = markerRef->GetPositionX();
             marker.y                = markerRef->GetPositionY();
-            marker.isDiscovered     = (mapData->flags & FLAG_VISIBLE)    != 0;
-            marker.isFastTravelable = (mapData->flags & FLAG_CAN_TRAVEL) != 0;
-            marker.markerType       = MarkerTypeToString(mapData->type);
+            marker.isDiscovered     = (rawFlags & FLAG_VISIBLE)    != 0;
+            marker.isFastTravelable = (rawFlags & FLAG_CAN_TRAVEL) != 0;
+            marker.markerType       = MarkerTypeToString(rawType);
 
             snapshot.markers.push_back(std::move(marker));
         }

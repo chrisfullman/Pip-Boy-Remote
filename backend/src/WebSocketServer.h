@@ -10,7 +10,7 @@
 
 // Forward-declare the uWS Loop so headers that include WebSocketServer.h do not
 // need to pull in <uwebsockets/App.h>.
-namespace uWS { class Loop; }
+namespace uWS { struct Loop; }  // uWS declares Loop as a struct, not a class
 
 namespace PipBoyRemote
 {
