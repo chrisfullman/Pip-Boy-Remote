@@ -223,14 +223,14 @@ namespace PipBoyRemote
         // The frontend hides the XP bar when this field is 0 (unavailable).
         state.nextLevelXP = 0.0f;
         {
-            const auto* gsc = RE::GameSettingCollection::GetSingleton();
+            auto* gsc = RE::GameSettingCollection::GetSingleton();
             if (gsc) {
-                const auto* xpBase    = gsc->GetSetting("iXPBase");
-                const auto* xpModBase = gsc->GetSetting("fXPModBase");
-                const auto* xpModMult = gsc->GetSetting("fXPModMult");
+                auto* xpBase    = gsc->GetSetting("iXPBase");
+                auto* xpModBase = gsc->GetSetting("fXPModBase");
+                auto* xpModMult = gsc->GetSetting("fXPModMult");
                 if (xpBase && xpModBase && xpModMult) {
-                    state.nextLevelXP = static_cast<float>(xpBase->data.i)
-                                      + (state.level * xpModBase->data.f * xpModMult->data.f);
+                    state.nextLevelXP = static_cast<float>(xpBase->GetInt())
+                                      + (state.level * xpModBase->GetFloat() * xpModMult->GetFloat());
                 }
             }
         }
