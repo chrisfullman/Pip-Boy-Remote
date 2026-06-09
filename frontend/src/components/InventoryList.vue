@@ -87,12 +87,11 @@ function consume(formID: number) {
         :class="{ 'item--equipped': item.isEquipped }"
       >
         <div class="item__name">
-          {{ item.name }}
+          {{ item.count > 1 ? `${item.name} (${item.count})` : item.name }}
           <span v-if="item.isEquipped" class="badge">Equipped</span>
         </div>
         <div class="item__meta">
           <span class="label">{{ CATEGORY_LABEL[item.category] }}</span>
-          <span class="value">×{{ item.count }}</span>
           <span class="label">{{ item.weight.toFixed(1) }} wt</span>
           <span class="label">{{ item.value }}c</span>
         </div>

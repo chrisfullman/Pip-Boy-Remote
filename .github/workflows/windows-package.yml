@@ -72,6 +72,10 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Download map and marker assets
+        shell: bash
+        run: bash scripts/download-assets.sh
+
       - name: Build frontend
         working-directory: frontend
         run: npm run build

@@ -1,18 +1,20 @@
 # Pip-Boy Remote — Development Progress
 
-Last updated: 2026-06-07
+Last updated: 2026-06-08
 
 This file is maintained by Claude between sessions as a quick-resume anchor.
 It summarises what has been built, what is pending, and the key decisions made along the way.
 
 ---
 
-## Overall status: ~70% complete
+## Overall status: ~95% complete
 
 The core communication pipeline (backend WebSocket → JSON → frontend Vue) is implemented
-end-to-end.  Player vitals, inventory, and the interactive map are all wired up.
-What remains is map-marker broadcasting from the backend, packaging the frontend into
-the mod ZIP, the contribution/style docs the spec requires, and general polish.
+end-to-end.  Player vitals, inventory, interactive map with calibrated coordinates, map
+markers, CI packaging pipeline, and the `nextLevelXP` GMST formula are all complete.
+The only remaining uncertainty is whether the XP formula produces accurate in-game values
+— it will display 0 if `GameSettingCollection` is unavailable, and the frontend hides the
+XP bar in that case.
 
 ---
 
@@ -32,8 +34,10 @@ the mod ZIP, the contribution/style docs the spec requires, and general polish.
 | `xmake.lua` | ✅ Complete | nlohmann_json, uWebSockets, catch2; PipBoyRemote.dll + _Tests targets |
 
 **Backend TODOs:**
-- `nextLevelXP` — always emitted as `0.0f`.  Formula requires reading `iXPBase` and
-  `fXPLevelUpMult` GMSTs from the game.  Frontend treats `0` as "unavailable" (hides XP bar).
+- `nextLevelXP` — ✅ Complete (2026-06-08).  Formula `iXPBase + (level × fXPModBase × fXPModMult)`
+  implemented in `SamplePlayerState()`.  GMST names confirmed from Fallout 4 binary dump
+  (note: `fXPLevelUpMult` does not exist; the correct names are `fXPModBase` / `fXPModMult`).
+  Frontend falls back to hiding the XP bar if the value is 0 (e.g., GMSTs unavailable).
 - **Map markers** — ✅ Complete (2026-06-08).  `MapMarker`/`MapMarkersSnapshot` in `GameState.h`,
   `BuildMapMarkersUpdate()` in `JsonMessages`, `SampleMapMarkers()` in `GameStatePoller`.
   Scans `RE::TESDataHandler::GetFormArray<RE::BGSLocation>()`, resolves `worldLocMarker`
@@ -65,8 +69,10 @@ the mod ZIP, the contribution/style docs the spec requires, and general polish.
 - **Vue component tests** — ✅ Complete (2026-06-08).  `ConnectionBanner` (14 tests: status display,
   input state, button rendering, connect/disconnect flow) and `InventoryList` (20 tests: empty state,
   rendering, tab/search filtering, action buttons) added in `test/`.  Total: 59 tests, all passing.
-- **MapView coordinate calibration** — world bounds are approximate (±130 000 / ±60 000).
-  Once real in-game positions are tested, update the `WORLDSPACES` constants in `MapView.vue`.
+- **MapView coordinate calibration** — ✅ Complete (2026-06-08).  `WORLDSPACES` bounds in `MapView.vue`
+  derived from the `Space_Info` table in `commonwealth_cartography.db` (Mappalachia) using the inverse
+  of their rendering formula.  Verified live: player indicator tracked correctly on roads from
+  Sanctuary Hills → Red Rocket Truck Stop → Concord.
 
 ### Scripts / tooling (`scripts/`)
 
@@ -95,7 +101,8 @@ All 5 schemas complete: `heartbeat`, `state_update`, `inventory_update`,
 | Backend unit tests | ✅ | |
 | Locate DLL + assemble ZIP | ✅ | |
 | Upload artifacts + GitHub Release | ✅ | |
-| **Frontend build** | ✅ Complete | Node.js 20 setup → `npm ci` → `npm run build`; script uses `PIPBOY_SKIP_FRONTEND_BUILD=1` |
+| **Frontend build** | ✅ Complete | Node.js 24 setup → `npm ci` → `npm run build`; script uses `PIPBOY_SKIP_FRONTEND_BUILD=1` |
+| **Download map assets** | ✅ Complete (2026-06-08) | `bash scripts/download-assets.sh` runs before Vite build so map images and marker SVGs are included in `frontend/dist/` and therefore in the mod ZIP |
 
 ### Documentation (`docs/`, root)
 
@@ -126,11 +133,11 @@ All 5 schemas complete: `heartbeat`, `state_update`, `inventory_update`,
 - `CONTRIBUTING.md`, `CODE_STYLE.md`, `CHANGELOG.md`, `docs/packaging.md`,
   `.clang-format`, `frontend/.prettierrc`, `.pre-commit-config.yaml`: all complete.
 
-### P3 — Partially done
-- ✅ Vue component tests (59 total, all passing) — 2026-06-08
-- ✅ `logs/sample.jsonl` — 2026-06-08
-- ⏳ `nextLevelXP` formula — requires confirming GMST names in a live game session
-- ⏳ MapView coordinate calibration — requires real in-game position testing
+### P3 — ✅ Done (2026-06-08)
+- ✅ Vue component tests (59 total, all passing)
+- ✅ `logs/sample.jsonl`
+- ✅ MapView coordinate calibration
+- ✅ `nextLevelXP` formula — `iXPBase + (level × fXPModBase × fXPModMult)`, GMST names confirmed from binary dump
 
 ---
 

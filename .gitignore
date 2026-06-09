@@ -21,8 +21,10 @@ frontend/.vite/
 scripts/node_modules/
 
 # Replay / dev logs (live captures are ignored; the sample fixture is tracked)
+logs/*.db
 logs/*.jsonl
 logs/*.log
+logs/*.txt
 !logs/sample.jsonl
 
 # Third-party map assets (downloaded by scripts/download-assets.sh)

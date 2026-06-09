@@ -62,6 +62,9 @@ export interface InventoryItem {
   isEquipped: boolean
   weight: number
   value: number
+  // Parsed from the game's raw name string; not shown in UI but preserved for future use.
+  iconTag?: string       // Content of a leading [Tag] in the name, e.g. "ToolHammer"
+  scrapMaterials?: string[] // Content of a trailing {{{Mat, Mat}}} in the name, e.g. ["Wood","Steel"]
 }
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected'

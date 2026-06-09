@@ -61,6 +61,15 @@ const STATUS_LABEL: Record<string, string> = {
         max="65535"
         :disabled="conn.status !== 'disconnected'"
       />
+      <label class="banner__checkbox-label" for="auto-reconnect">
+        <input
+          id="auto-reconnect"
+          v-model="prefs.autoReconnect"
+          type="checkbox"
+          class="banner__checkbox"
+        />
+        Auto Reconnect
+      </label>
       <button
         v-if="conn.status === 'disconnected'"
         type="submit"
@@ -110,5 +119,20 @@ const STATUS_LABEL: Record<string, string> = {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.banner__checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.banner__checkbox {
+  cursor: pointer;
+  accent-color: var(--c-accent);
 }
 </style>

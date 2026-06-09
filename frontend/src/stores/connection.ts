@@ -11,6 +11,7 @@ import {
 import { usePlayerStore } from './player'
 import { useInventoryStore } from './inventory'
 import { useMapStore } from './map'
+import { usePreferencesStore } from './preferences'
 
 const RECONNECT_DELAY_MS = 3000
 
@@ -25,17 +26,18 @@ export const useConnectionStore = defineStore('connection', () => {
   let reconnectTimer:  ReturnType<typeof setTimeout> | null = null
   let targetHost = ''
   let targetPort = 0
-  let autoReconnect = false
+  // Set to true when the user explicitly clicks Disconnect, preventing the
+  // onclose handler from scheduling a reconnect even if the pref is on.
+  let manualDisconnect = false
 
   function connect(host: string, port: number): void {
-    autoReconnect = true
-    targetHost    = host
-    targetPort    = port
+    targetHost = host
+    targetPort = port
     _openSocket(host, port)
   }
 
   function disconnect(): void {
-    autoReconnect = false
+    manualDisconnect = true
     _clearReconnect()
     ws?.close()
     ws = null
@@ -72,7 +74,9 @@ export const useConnectionStore = defineStore('connection', () => {
     socket.onclose = () => {
       status.value = 'disconnected'
       ws = null
-      if (autoReconnect) {
+      const wasManual = manualDisconnect
+      manualDisconnect = false
+      if (!wasManual && usePreferencesStore().autoReconnect) {
         _scheduleReconnect()
       }
     }
@@ -83,7 +87,9 @@ export const useConnectionStore = defineStore('connection', () => {
   function _scheduleReconnect(): void {
     _clearReconnect()
     reconnectTimer = setTimeout(() => {
-      if (autoReconnect) { _openSocket(targetHost, targetPort) }
+      // Re-check the pref at fire time: the user may have unchecked it while
+      // the timer was pending.
+      if (usePreferencesStore().autoReconnect) { _openSocket(targetHost, targetPort) }
     }, RECONNECT_DELAY_MS)
   }
 

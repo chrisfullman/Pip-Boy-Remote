@@ -216,11 +216,24 @@ namespace PipBoyRemote
         // Current accumulated XP via the actor value system.
         state.experience = player->GetActorValue(*av->experience);
 
-        // nextLevelXP requires reading the iXPBase / fXPLevelUpMult GMSTs and
-        // applying the Fallout 4 XP curve formula.  These GMST names must be
-        // confirmed against a live game session before use, so this field
-        // is left as 0.0f for now.  The frontend treats 0 as "unavailable".
+        // XP required to reach the next level.
+        // Formula: nextLevelXP = iXPBase + (currentLevel × fXPModBase × fXPModMult)
+        // GMST names confirmed from Fallout 4 binary dump; fXPModMult defaults to
+        // 1.0 at normal difficulty, giving a linear XP curve in current level.
+        // The frontend hides the XP bar when this field is 0 (unavailable).
         state.nextLevelXP = 0.0f;
+        {
+            const auto* gsc = RE::GameSettingCollection::GetSingleton();
+            if (gsc) {
+                const auto* xpBase    = gsc->GetSetting("iXPBase");
+                const auto* xpModBase = gsc->GetSetting("fXPModBase");
+                const auto* xpModMult = gsc->GetSetting("fXPModMult");
+                if (xpBase && xpModBase && xpModMult) {
+                    state.nextLevelXP = static_cast<float>(xpBase->data.i)
+                                      + (state.level * xpModBase->data.f * xpModMult->data.f);
+                }
+            }
+        }
 
         WebSocketServer::GetSingleton().BroadcastStateUpdate(state);
     }

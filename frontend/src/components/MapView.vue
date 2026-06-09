@@ -16,10 +16,19 @@ const CANVAS_H = 512
 const canvas = ref<HTMLCanvasElement | null>(null)
 
 // ── Worldspace definitions ─────────────────────────────────────────────────────
-// Coordinate bounds are approximate.  They cover the full extent of each
-// game worldspace in Fallout 4 units and are mapped 1:1 to the downloaded
-// map images (which are square 4096×4096 exports from Mappalachia).
-// Calibrate these constants once real in-game positions are verified.
+// Bounds define the game-unit coordinates that map to the four pixel edges of
+// each 4096×4096 Mappalachia image.  Derived from the Space_Info table in the
+// Commonwealth_Cartography SQLite database using the Mappalachia rendering
+// formula:
+//   pixel_x = ((game_x − xCenter) × effScale) + 2048 + nudgeX
+//   pixel_y = ((−game_y + yCenter) × effScale) + 2048 + nudgeY
+//   effScale = (4096 / max(entityXRange, entityYRange)) × nudgeScale
+// Solved for game coords at pixel 0 and pixel 4096 on each axis.
+//
+// Commonwealth (xCenter=51654, yCenter=−33170, nudgeX=945, nudgeY=160, nudgeScale=1.98):
+//   Vault 111 (−89272, 91369) → image (20.4 %, 7.4 %) — inside dashed playable boundary ✓
+//   The Castle (48322, −46600) → (71.8 %, 58.9 %) ✓
+//   Nuka-World Transit (−111604, 20805) → 12.1 % from left, just west of playable boundary ✓
 type WorldspaceKey = 'Commonwealth' | 'DLC03FarHarbor' | 'NukaWorld'
 
 const WORLDSPACES: Record<WorldspaceKey, {
@@ -31,20 +40,22 @@ const WORLDSPACES: Record<WorldspaceKey, {
   Commonwealth: {
     label: 'Commonwealth',
     file:  '/maps/Commonwealth.jpg',
-    minX: -130_000, maxX: 130_000,
-    minY: -100_000, maxY: 130_000,
+    minX: -144_000, maxX: 124_000,
+    minY: -157_000, maxY: 111_000,
   },
   DLC03FarHarbor: {
     label: 'Far Harbor',
     file:  '/maps/DLC03FarHarbor.jpg',
-    minX: -60_000, maxX: 60_000,
-    minY: -60_000, maxY: 60_000,
+    // DLC03FarHarbor: xCenter=−9001, yCenter=16907, nudgeX=−470, nudgeY=−475, nudgeScale=1.247
+    minX: -67_000, maxX: 83_000,
+    minY: -75_000, maxY: 74_000,
   },
   NukaWorld: {
     label: 'Nuka-World',
     file:  '/maps/NukaWorld.jpg',
-    minX: -60_000, maxX: 60_000,
-    minY: -60_000, maxY: 60_000,
+    // NukaWorld: xCenter=−9692, yCenter=−2926, nudgeX=−100, nudgeY=330, nudgeScale=1.66
+    minX: -68_000, maxX: 54_000,
+    minY: -54_000, maxY: 68_000,
   },
 }
 

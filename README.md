@@ -28,6 +28,54 @@ grid if the images are absent.
 See [`docs/ASSETS.md`](docs/ASSETS.md) for full attribution details and GPL-3.0
 redistribution obligations.
 
+## Offline development — replaying a game session
+
+The replay harness lets you develop and test the frontend without a running game.
+It starts a WebSocket server on the same port the game uses and feeds recorded
+messages to the frontend exactly as the backend would.
+
+```bash
+cd scripts
+npm install          # first time only
+```
+
+**Using a recorded session from Chrome DevTools:**
+
+Open Chrome DevTools → Network → WS → click the `ws://` connection → Messages
+tab → select all rows → copy and save as a `.txt` file.  Then:
+
+```bash
+# Play back at real speed (~11 min for a typical session)
+node scripts/replay.js "logs/WebSocket Log.txt"
+
+# Play back at 5× speed (~2 min)
+node scripts/replay.js --speed 5 "logs/WebSocket Log.txt"
+
+# Loop indefinitely at 3× speed
+node scripts/replay.js --speed 3 --loop "logs/WebSocket Log.txt"
+```
+
+**Using the bundled sample log** (a short scripted sequence for quick UI checks):
+
+```bash
+node scripts/replay.js logs/sample.jsonl
+```
+
+**No recorded data?** Run with no arguments for a synthetic demo that slowly
+drains health and moves a player dot across the map:
+
+```bash
+node scripts/replay.js
+```
+
+Once the harness is running, open the frontend (`npm run dev` in `frontend/`),
+connect to `ws://127.0.0.1:11104`, and the UI will behave as if a live game
+session is active.
+
+> **Note:** The replay harness and the game backend both use port `11104` by
+> default.  Do not run them at the same time.  Use `--port` to override if you
+> need both running simultaneously (e.g. `--port 11105`).
+
 ## Dependency notice
 
 This project includes a local copy of `commonlibf4` under `backend/commonlibf4`. You can build the backend using that copy directly, or point CMake to another `commonlibf4` or F4SE SDK installation using `F4SE_SDK_PATH` or `COMMONLIBF4_PATH`.

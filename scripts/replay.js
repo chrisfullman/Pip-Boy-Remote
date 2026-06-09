@@ -16,11 +16,16 @@
  *   --loop        Loop the log indefinitely   (default: off)
  *   --help        Show this help message
  *
- * Log file format:
- *   Each line must be a valid JSON object matching one of the schemas in
- *   schema/.  Lines beginning with '#' or that are blank are ignored.
+ * Log file formats:
+ *   JSON Lines (.jsonl): one JSON object per line; '#' lines and blank lines
+ *   are skipped.  This is the format produced by sample.jsonl.
  *
- * Example log line:
+ *   Chrome DevTools WebSocket export (.txt): tab-separated "Data<TAB>Time"
+ *   format exported from the Chrome DevTools Network → WS → Messages panel.
+ *   Non-JSON rows (e.g. "WebSocket Connection Established") are skipped
+ *   automatically.  The format is detected from the first line.
+ *
+ * Example JSONL line:
  *   {"type":"state_update","timestamp":"2026-06-07T12:00:00.000Z","player":{...}}
  *
  * If no log file is provided the harness generates synthetic heartbeat and
@@ -28,13 +33,10 @@
  * any recorded data.
  */
 
-'use strict';
-
-const http      = require('node:http');
-const fs        = require('node:fs');
-const path      = require('node:path');
-const readline  = require('node:readline');
-const { WebSocketServer } = require('ws');
+import http               from 'node:http';
+import fs                 from 'node:fs';
+import path               from 'node:path';
+import { WebSocketServer } from 'ws';
 
 // ── CLI parsing ──────────────────────────────────────────────────────────────
 
@@ -117,20 +119,91 @@ function broadcast(message) {
 // ── Message replay ───────────────────────────────────────────────────────────
 
 /**
- * Loads all non-blank, non-comment lines from a JSON Lines file.
+ * Returns true when the file looks like a Chrome DevTools WebSocket export.
+ * Chrome exports start with a "Data\tTime" header row.
+ * @param {string[]} lines
+ * @returns {boolean}
+ */
+function isDevToolsFormat(lines) {
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) { continue; }
+        return trimmed === 'Data\tTime';
+    }
+    return false;
+}
+
+/**
+ * Parses a Chrome DevTools WebSocket message export (tab-separated).
+ * Each data row is "<message_data>\t<unix_timestamp_seconds>".
+ * Rows that are not valid JSON objects (e.g. connection events) are skipped.
+ * @param {string[]} lines
+ * @returns {object[]}
+ */
+function parseDevToolsLog(lines) {
+    const messages = [];
+    let skipped = 0;
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed === 'Data\tTime') { continue; }
+
+        // Split on the last tab to separate JSON data from the timestamp column.
+        const tabIdx = trimmed.lastIndexOf('\t');
+        const data   = tabIdx >= 0 ? trimmed.slice(0, tabIdx) : trimmed;
+
+        if (!data.startsWith('{')) {
+            skipped++;
+            continue;  // skip non-JSON rows such as "WebSocket Connection Established"
+        }
+
+        let parsed;
+        try {
+            parsed = JSON.parse(data);
+        } catch (_) {
+            skipped++;
+            continue;
+        }
+
+        // Chrome DevTools captures both directions.  Client→server action
+        // messages (e.g. equip, consume) have an "action" field but no "type";
+        // skip them — they are not server broadcasts and cannot be replayed.
+        if (!parsed.type) {
+            skipped++;
+            continue;
+        }
+
+        messages.push(parsed);
+    }
+
+    if (skipped > 0) {
+        console.log(`[replay] Skipped ${skipped} non-JSON rows (connection events, etc.)`);
+    }
+    return messages;
+}
+
+/**
+ * Loads messages from either a JSON Lines file or a Chrome DevTools WebSocket
+ * export.  The format is detected automatically from the first non-blank line.
  * @param {string} filePath
  * @returns {object[]}
  */
 function loadMessages(filePath) {
-    const lines = fs.readFileSync(filePath, 'utf8').split('\n');
+    const lines    = fs.readFileSync(filePath, 'utf8').split('\n');
     const messages = [];
 
+    if (isDevToolsFormat(lines)) {
+        console.log('[replay] Detected Chrome DevTools WebSocket export format');
+        return parseDevToolsLog(lines);
+    }
+
+    // JSON Lines format.
     for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('#')) { continue; }
         try {
             messages.push(JSON.parse(trimmed));
-        } catch (err) {
+        } catch (_) {
             console.warn(`[replay] Skipping invalid JSON line: ${trimmed.slice(0, 60)}…`);
         }
     }
