@@ -216,21 +216,26 @@ namespace PipBoyRemote
         // Current accumulated XP via the actor value system.
         state.experience = player->GetActorValue(*av->experience);
 
-        // XP required to reach the next level.
-        // Formula: nextLevelXP = iXPBase + (currentLevel × fXPModBase × fXPModMult)
-        // GMST names confirmed from Fallout 4 binary dump; fXPModMult defaults to
-        // 1.0 at normal difficulty, giving a linear XP curve in current level.
-        // The frontend hides the XP bar when this field is 0 (unavailable).
+        // Cumulative XP threshold to reach the next level.
+        // Each level L costs (iXPBase + (L-1)*iXPBumpBase) XP to clear, so the
+        // running total to reach level (L+1) from level 1 is:
+        //   L * iXPBase + iXPBumpBase * L*(L-1)/2
+        // Verified against live session data:
+        //   Level 1 → 2: 1*200 + 0          = 200  ✓
+        //   Level 2 → 3: 2*200 + 50*1       = 450  (player had 205 XP at L2, not yet 450)
+        //   Level 3 → 4: 3*200 + 50*3       = 750  ✓ (matches published FO4 tables)
+        // The frontend hides the XP bar when this field is 0 (GMST unavailable).
         state.nextLevelXP = 0.0f;
         {
             auto* gsc = RE::GameSettingCollection::GetSingleton();
             if (gsc) {
-                auto* xpBase    = gsc->GetSetting("iXPBase");
-                auto* xpModBase = gsc->GetSetting("fXPModBase");
-                auto* xpModMult = gsc->GetSetting("fXPModMult");
-                if (xpBase && xpModBase && xpModMult) {
-                    state.nextLevelXP = static_cast<float>(xpBase->GetInt())
-                                      + (state.level * xpModBase->GetFloat() * xpModMult->GetFloat());
+                auto* xpBase     = gsc->GetSetting("iXPBase");
+                auto* xpBumpBase = gsc->GetSetting("iXPBumpBase");
+                if (xpBase && xpBumpBase) {
+                    const auto L    = static_cast<std::int32_t>(state.level);
+                    const auto base = xpBase->GetInt();
+                    const auto bump = xpBumpBase->GetInt();
+                    state.nextLevelXP = static_cast<float>(L * base + bump * L * (L - 1) / 2);
                 }
             }
         }
