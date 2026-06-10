@@ -344,6 +344,9 @@ namespace PipBoyRemote
                 if (!obj)    { return; }
                 const RE::BGSObjectInstance inst{ obj, nullptr };
                 manager->EquipObject(player, inst, 0, 1, nullptr, false, false, true, true, false);
+                // Equipping a carried item doesn't change cachedWeight, so force a
+                // full inventory rescan to broadcast the updated isEquipped state.
+                GameStatePoller::GetSingleton().ForceInventoryRescan();
             });
         }
 
@@ -366,6 +369,7 @@ namespace PipBoyRemote
                 if (!obj)    { return; }
                 const RE::BGSObjectInstance inst{ obj, nullptr };
                 manager->UnequipObject(player, &inst, 1, nullptr, 0, false, false, true, true, nullptr);
+                GameStatePoller::GetSingleton().ForceInventoryRescan();
             });
         }
 
@@ -390,6 +394,9 @@ namespace PipBoyRemote
                 if (!alch)   { return; }
                 const RE::BGSObjectInstance inst{ alch, nullptr };
                 manager->EquipObject(player, inst, 0, 1, nullptr, false, false, true, true, false);
+                // Consuming an item removes it from the inventory and does change weight,
+                // but the force-rescan ensures an immediate broadcast on the next sample.
+                GameStatePoller::GetSingleton().ForceInventoryRescan();
             });
         }
         void HandleSetActiveQuest(WS* ws, const nlohmann::json& msg)

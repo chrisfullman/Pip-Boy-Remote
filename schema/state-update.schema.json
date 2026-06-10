@@ -55,6 +55,10 @@
         "nextLevelXP": {
           "type": "number"
         },
+        "levelStartXP": {
+          "type": "number",
+          "description": "Cumulative XP at the start of the current level; used for within-level XP progress bar."
+        },
         "condition": {
           "type": "object",
           "properties": {

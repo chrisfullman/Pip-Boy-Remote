@@ -35,8 +35,16 @@ namespace PipBoyRemote
         void Stop();
 
         // Records the FormID of the map marker the frontend most recently set as the
-        // active waypoint.  Called from the WebSocket thread; thread-safe.
+        // active waypoint.  Triggers an immediate marker rescan so the star appears
+        // on the next game frame rather than waiting up to 10 s.
+        // Called from the WebSocket thread; thread-safe.
         void SetWaypointFormID(std::uint32_t formID) noexcept;
+
+        // Flags that the next SampleInventory() call must do a full rescan even if
+        // the cached inventory weight hasn't changed (e.g. after equip/unequip/consume
+        // when the item was already carried).  Called from the game thread (inside a
+        // PostToGameThread task); no external synchronisation required.
+        void ForceInventoryRescan() noexcept;
 
         // Records the FormID of the quest the frontend wants to set as the tracked quest.
         // The change is applied on the game thread on the next quest sample.
@@ -93,10 +101,17 @@ namespace PipBoyRemote
 
         // Map marker rescan: fire a full scan on worldspace change and every
         // FRAMES_PER_MARKER_RESCAN frames to pick up newly-discovered locations.
-        static constexpr int     FRAMES_PER_MARKER_RESCAN = 600;  // ~10 s at 60 fps
-        int                      _markerRescanCounter{ 0 };
-        bool                     _forceMapMarkerRescan{ false };
-        RE::TESWorldSpace*       _lastWorldspace{ nullptr };
+        // Atomic so SetWaypointFormID() (WebSocket thread) can trigger an immediate
+        // rescan without a data race.
+        static constexpr int        FRAMES_PER_MARKER_RESCAN = 600;  // ~10 s at 60 fps
+        int                         _markerRescanCounter{ 0 };
+        std::atomic<bool>           _forceMapMarkerRescan{ false };
+        RE::TESWorldSpace*          _lastWorldspace{ nullptr };
+
+        // Inventory rescan: set by ForceInventoryRescan() (game thread, inside an
+        // AddTask lambda) so the next SampleInventory() call broadcasts even when the
+        // cached weight didn't change (equip/unequip doesn't move item weight).
+        std::atomic<bool>           _forceInventoryRescan{ false };
 
         // Quest rescan: broadcast every FRAMES_PER_QUEST_RESCAN frames so objective
         // completions and stage changes are reflected in the frontend promptly.

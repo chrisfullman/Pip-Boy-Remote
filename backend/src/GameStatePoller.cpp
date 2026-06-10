@@ -118,7 +118,7 @@ namespace PipBoyRemote
         _frameCount           = 0;
         _lastInventoryWeight  = -1.0f;  // force an inventory scan on the first frame
         _markerRescanCounter  = 0;
-        _forceMapMarkerRescan = true;   // force a marker scan on the first active frame
+        _forceMapMarkerRescan.store(true, std::memory_order_relaxed);  // force a marker scan on the first active frame
         _lastWorldspace       = nullptr;
         _questRescanCounter   = 0;
         _forceQuestRescan     = true;   // force a quest scan on the first active frame
@@ -143,6 +143,14 @@ namespace PipBoyRemote
     void GameStatePoller::SetWaypointFormID(std::uint32_t formID) noexcept
     {
         _waypointFormID.store(formID, std::memory_order_relaxed);
+        // Trigger an immediate marker rescan so the star appears on the next game
+        // frame rather than waiting up to FRAMES_PER_MARKER_RESCAN frames (~10 s).
+        _forceMapMarkerRescan.store(true, std::memory_order_relaxed);
+    }
+
+    void GameStatePoller::ForceInventoryRescan() noexcept
+    {
+        _forceInventoryRescan.store(true, std::memory_order_relaxed);
     }
 
     void GameStatePoller::SetActiveQuestFormID(std::uint32_t formID) noexcept
@@ -169,8 +177,8 @@ namespace PipBoyRemote
         // Increment the marker rescan counter; flag a forced rescan when it expires.
         ++_markerRescanCounter;
         if (_markerRescanCounter >= FRAMES_PER_MARKER_RESCAN) {
-            _markerRescanCounter  = 0;
-            _forceMapMarkerRescan = true;
+            _markerRescanCounter = 0;
+            _forceMapMarkerRescan.store(true, std::memory_order_relaxed);
         }
         SampleMapMarkers();
 
@@ -272,9 +280,11 @@ namespace PipBoyRemote
         if (!player || !player->inventoryList) { return; }
 
         // Use the cached inventory weight as a cheap change detector.
-        // A full rescan is only performed when the weight changes.
-        const float currentWeight = player->inventoryList->cachedWeight;
-        if (currentWeight == _lastInventoryWeight) { return; }
+        // A full rescan is also forced when ForceInventoryRescan() has been called
+        // (e.g. after equip/unequip, which doesn't change weight for carried items).
+        const float currentWeight  = player->inventoryList->cachedWeight;
+        const bool  forcedRescan   = _forceInventoryRescan.exchange(false, std::memory_order_relaxed);
+        if (currentWeight == _lastInventoryWeight && !forcedRescan) { return; }
         _lastInventoryWeight = currentWeight;
 
         InventorySnapshot snapshot;
@@ -326,10 +336,12 @@ namespace PipBoyRemote
             currentWorldspace = playerCell->worldSpace;
         }
 
-        // Only rescan when the worldspace changes or a periodic rescan is due.
-        if (currentWorldspace == _lastWorldspace && !_forceMapMarkerRescan) { return; }
-        _lastWorldspace       = currentWorldspace;
-        _forceMapMarkerRescan = false;
+        // Only rescan when the worldspace changes or a periodic/forced rescan is due.
+        // exchange(false) atomically reads and clears the flag in one operation,
+        // preventing a write-from-WebSocket-thread data race.
+        const bool forceRescan = _forceMapMarkerRescan.exchange(false, std::memory_order_relaxed);
+        if (currentWorldspace == _lastWorldspace && !forceRescan) { return; }
+        _lastWorldspace = currentWorldspace;
 
         auto* dataHandler = RE::TESDataHandler::GetSingleton();
         if (!dataHandler) { return; }
