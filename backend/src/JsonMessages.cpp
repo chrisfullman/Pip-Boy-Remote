@@ -58,6 +58,7 @@ namespace PipBoyRemote::JsonMessages
                 { "level",           state.level            },
                 { "experience",      state.experience       },
                 { "nextLevelXP",     state.nextLevelXP      },
+                { "levelStartXP",    state.levelStartXP     },
                 { "condition", {
                     { "head",      state.condition.head      },
                     { "torso",     state.condition.torso     },
@@ -143,6 +144,40 @@ namespace PipBoyRemote::JsonMessages
         }
         if (snapshot.activeWaypointID != 0) {
             msg["activeWaypointID"] = snapshot.activeWaypointID;
+        }
+        return msg.dump();
+    }
+
+    std::string BuildQuestUpdate(const QuestSnapshot& snapshot)
+    {
+        nlohmann::json quests = nlohmann::json::array();
+        for (const auto& q : snapshot.quests) {
+            nlohmann::json objectives = nlohmann::json::array();
+            for (const auto& obj : q.objectives) {
+                objectives.push_back({
+                    { "index",       obj.index       },
+                    { "text",        obj.text        },
+                    { "isCompleted", obj.isCompleted },
+                });
+            }
+
+            nlohmann::json entry = {
+                { "formID",       q.formID       },
+                { "name",         q.name         },
+                { "currentStage", q.currentStage },
+                { "isTracked",    q.isTracked    },
+                { "objectives",   std::move(objectives) },
+            };
+            quests.push_back(std::move(entry));
+        }
+
+        nlohmann::json msg = {
+            { "type",      "quest_update"     },
+            { "timestamp", CurrentTimestamp() },
+            { "quests",    std::move(quests)  },
+        };
+        if (snapshot.activeQuestFormID != 0) {
+            msg["activeQuestFormID"] = snapshot.activeQuestFormID;
         }
         return msg.dump();
     }

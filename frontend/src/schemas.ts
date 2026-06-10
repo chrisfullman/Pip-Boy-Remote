@@ -7,6 +7,7 @@ import stateUpdateSchema from '../../schema/state-update.schema.json'
 import inventoryUpdateSchema from '../../schema/inventory-update.schema.json'
 import actionResponseSchema from '../../schema/action-response.schema.json'
 import mapMarkersUpdateSchema from '../../schema/map-markers-update.schema.json'
+import questUpdateSchema from '../../schema/quest-update.schema.json'
 
 const ajv = new Ajv({ strict: false })
 addFormats(ajv)
@@ -17,3 +18,4 @@ export const validateStateUpdate       = ajv.compile(stateUpdateSchema)
 export const validateInventoryUpdate   = ajv.compile(inventoryUpdateSchema)
 export const validateActionResponse    = ajv.compile(actionResponseSchema)
 export const validateMapMarkersUpdate  = ajv.compile(mapMarkersUpdateSchema)
+export const validateQuestUpdate       = ajv.compile(questUpdateSchema)

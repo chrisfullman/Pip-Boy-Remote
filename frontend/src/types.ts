@@ -31,6 +31,8 @@ export interface PlayerState {
   level?: number
   experience?: number
   nextLevelXP?: number
+  /** Cumulative XP at the start of the current level; used for within-level progress bar. */
+  levelStartXP?: number
   condition: LimbConditions
 }
 
@@ -65,6 +67,24 @@ export interface InventoryItem {
   // Parsed from the game's raw name string; not shown in UI but preserved for future use.
   iconTag?: string       // Content of a leading [Tag] in the name, e.g. "ToolHammer"
   scrapMaterials?: string[] // Content of a trailing {{{Mat, Mat}}} in the name, e.g. ["Wood","Steel"]
+}
+
+// ── Quest types ───────────────────────────────────────────────────────────────
+
+export interface QuestObjective {
+  index: number
+  text: string
+  isCompleted: boolean
+}
+
+export interface QuestEntry {
+  formID: number
+  name: string
+  currentStage: number
+  /** True when the quest is shown in the HUD / tracked in the Pip-Boy. */
+  isTracked: boolean
+  /** Objectives currently displayed to the player. */
+  objectives: QuestObjective[]
 }
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected'
@@ -119,12 +139,21 @@ export interface MapMarkersUpdateMessage {
   activeWaypointID?: number
 }
 
+export interface QuestUpdateMessage {
+  type: 'quest_update'
+  timestamp: string
+  quests: QuestEntry[]
+  /** FormID of the currently tracked quest; absent when none is tracked. */
+  activeQuestFormID?: number
+}
+
 export type IncomingMessage =
   | HeartbeatMessage
   | StateUpdateMessage
   | InventoryUpdateMessage
   | ActionResponseMessage
   | MapMarkersUpdateMessage
+  | QuestUpdateMessage
 
 // ── Outgoing action messages ──────────────────────────────────────────────────
 
@@ -134,3 +163,4 @@ export type OutgoingAction =
   | { action: 'equip'; formID: number }
   | { action: 'unequip'; formID: number }
   | { action: 'consume'; formID: number }
+  | { action: 'set_active_quest'; formID: number }

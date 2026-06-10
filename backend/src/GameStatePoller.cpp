@@ -120,6 +120,8 @@ namespace PipBoyRemote
         _markerRescanCounter  = 0;
         _forceMapMarkerRescan = true;   // force a marker scan on the first active frame
         _lastWorldspace       = nullptr;
+        _questRescanCounter   = 0;
+        _forceQuestRescan     = true;   // force a quest scan on the first active frame
         _active.store(true, std::memory_order_release);
     }
 
@@ -141,6 +143,11 @@ namespace PipBoyRemote
     void GameStatePoller::SetWaypointFormID(std::uint32_t formID) noexcept
     {
         _waypointFormID.store(formID, std::memory_order_relaxed);
+    }
+
+    void GameStatePoller::SetActiveQuestFormID(std::uint32_t formID) noexcept
+    {
+        _pendingActiveQuestFormID.store(formID, std::memory_order_relaxed);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -166,6 +173,19 @@ namespace PipBoyRemote
             _forceMapMarkerRescan = true;
         }
         SampleMapMarkers();
+
+        // Quest rescan: run on the periodic interval or immediately when a
+        // set_active_quest action is pending.
+        ++_questRescanCounter;
+        if (_questRescanCounter >= FRAMES_PER_QUEST_RESCAN) {
+            _questRescanCounter = 0;
+            _forceQuestRescan   = true;
+        }
+        const bool hasPendingQuestAction =
+            _pendingActiveQuestFormID.load(std::memory_order_relaxed) != 0;
+        if (_forceQuestRescan || hasPendingQuestAction) {
+            SampleQuests();
+        }
     }
 
     void GameStatePoller::SamplePlayerState()
@@ -235,7 +255,10 @@ namespace PipBoyRemote
                     const auto L    = static_cast<std::int32_t>(state.level);
                     const auto base = xpBase->GetInt();
                     const auto bump = xpBumpBase->GetInt();
-                    state.nextLevelXP = static_cast<float>(L * base + bump * L * (L - 1) / 2);
+                    state.nextLevelXP  = static_cast<float>(L * base + bump * L * (L - 1) / 2);
+                    // Same formula at (L-1) gives the cumulative XP at the start of this level.
+                    const auto prevL   = L - 1;
+                    state.levelStartXP = static_cast<float>(prevL * base + bump * prevL * (prevL - 1) / 2);
                 }
             }
         }
@@ -370,5 +393,82 @@ namespace PipBoyRemote
         snapshot.activeWaypointID = _waypointFormID.load(std::memory_order_relaxed);
 
         WebSocketServer::GetSingleton().BroadcastMapMarkersUpdate(snapshot);
+    }
+
+    void GameStatePoller::SampleQuests()
+    {
+        _forceQuestRescan = false;
+
+        auto* dataHandler = RE::TESDataHandler::GetSingleton();
+        if (!dataHandler) { return; }
+
+        // Apply any pending "set active quest" request from the frontend.
+        // Setting kDisplayedInHUD on the desired quest and clearing it on all others
+        // tells the game to track that quest in the HUD.
+        const auto pendingFormID =
+            _pendingActiveQuestFormID.exchange(0, std::memory_order_relaxed);
+        if (pendingFormID != 0) {
+            for (auto* quest : dataHandler->GetFormArray<RE::TESQuest>()) {
+                if (!quest) { continue; }
+                const auto desiredBit = static_cast<std::uint16_t>(RE::QuestFlag::kDisplayedInHUD);
+                if (quest->GetFormID() == pendingFormID) {
+                    quest->data.flags |= desiredBit;
+                } else {
+                    quest->data.flags &= static_cast<std::uint16_t>(~desiredBit);
+                }
+            }
+        }
+
+        QuestSnapshot snapshot;
+
+        for (auto* quest : dataHandler->GetFormArray<RE::TESQuest>()) {
+            if (!quest) { continue; }
+
+            const auto flags = quest->data.flags;
+
+            // Skip quests that are not actively running or have already ended.
+            const bool isActive    = (flags & static_cast<std::uint16_t>(RE::QuestFlag::kActive))    != 0;
+            const bool isCompleted = (flags & static_cast<std::uint16_t>(RE::QuestFlag::kCompleted)) != 0;
+            const bool isFailed    = (flags & static_cast<std::uint16_t>(RE::QuestFlag::kFailed))    != 0;
+            if (!isActive || isCompleted || isFailed) { continue; }
+
+            QuestEntry entry;
+            entry.formID       = quest->GetFormID();
+            entry.currentStage = quest->currentStage;
+            entry.isTracked    = (flags & static_cast<std::uint16_t>(RE::QuestFlag::kDisplayedInHUD)) != 0;
+
+            const auto nameView = RE::TESFullName::GetFullName(*quest);
+            entry.name = std::string{ nameView };
+
+            // Skip internal/system quests with no display name.
+            if (entry.name.empty()) { continue; }
+
+            if (entry.isTracked) {
+                snapshot.activeQuestFormID = entry.formID;
+            }
+
+            // Collect objectives that are currently displayed to the player.
+            // kDisplayed  = active objective; kCompletedDisplayed = just completed.
+            for (std::uint32_t i = 0; i < quest->objectives.size(); ++i) {
+                auto* obj = quest->objectives[i];
+                if (!obj) { continue; }
+
+                const auto state = static_cast<RE::QUEST_OBJECTIVE_STATE>(obj->state);
+                if (state != RE::QUEST_OBJECTIVE_STATE::kDisplayed &&
+                    state != RE::QUEST_OBJECTIVE_STATE::kCompletedDisplayed) {
+                    continue;
+                }
+
+                QuestObjective objective;
+                objective.index       = obj->index;
+                objective.text        = obj->displayText.c_str();
+                objective.isCompleted = (state == RE::QUEST_OBJECTIVE_STATE::kCompletedDisplayed);
+                entry.objectives.push_back(std::move(objective));
+            }
+
+            snapshot.quests.push_back(std::move(entry));
+        }
+
+        WebSocketServer::GetSingleton().BroadcastQuestUpdate(snapshot);
     }
 }

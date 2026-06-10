@@ -7,10 +7,12 @@ import {
   validateInventoryUpdate,
   validateActionResponse,
   validateMapMarkersUpdate,
+  validateQuestUpdate,
 } from '@/schemas'
 import { usePlayerStore } from './player'
 import { useInventoryStore } from './inventory'
 import { useMapStore } from './map'
+import { useQuestStore } from './quest'
 import { usePreferencesStore } from './preferences'
 
 const RECONNECT_DELAY_MS = 3000
@@ -157,6 +159,14 @@ export const useConnectionStore = defineStore('connection', () => {
           return
         }
         useMapStore().applyMarkersUpdate(incoming.markers, incoming.worldspace, incoming.activeWaypointID)
+        break
+
+      case 'quest_update':
+        if (!validateQuestUpdate(incoming)) {
+          console.warn('[WS] Invalid quest_update:', validateQuestUpdate.errors)
+          return
+        }
+        useQuestStore().applyQuestUpdate(incoming.quests, incoming.activeQuestFormID)
         break
 
       default:

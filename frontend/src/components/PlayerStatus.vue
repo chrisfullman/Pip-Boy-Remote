@@ -81,11 +81,14 @@ const LIMB_LABEL: Record<typeof LIMBS[number], string> = {
           <span class="value accent">{{ Math.round(s.level) }}</span>
         </div>
         <div class="stat stat--grow" v-if="s.experience !== undefined && s.nextLevelXP">
-          <div class="label">XP {{ Math.round(s.experience) }} / {{ Math.round(s.nextLevelXP) }}</div>
+          <div class="label">
+            XP {{ Math.round(s.experience - (s.levelStartXP ?? 0)) }} /
+            {{ Math.round(s.nextLevelXP - (s.levelStartXP ?? 0)) }}
+          </div>
           <div class="meter" style="margin-top: 4px">
             <div
               class="meter__fill"
-              :style="{ width: pct(s.experience, s.nextLevelXP) + '%' }"
+              :style="{ width: pct(s.experience - (s.levelStartXP ?? 0), s.nextLevelXP - (s.levelStartXP ?? 0)) + '%' }"
             />
           </div>
         </div>

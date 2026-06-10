@@ -38,6 +38,11 @@ namespace PipBoyRemote
         // active waypoint.  Called from the WebSocket thread; thread-safe.
         void SetWaypointFormID(std::uint32_t formID) noexcept;
 
+        // Records the FormID of the quest the frontend wants to set as the tracked quest.
+        // The change is applied on the game thread on the next quest sample.
+        // Called from the WebSocket thread; thread-safe.
+        void SetActiveQuestFormID(std::uint32_t formID) noexcept;
+
     private:
         GameStatePoller()  = default;
         ~GameStatePoller() = default;
@@ -59,6 +64,11 @@ namespace PipBoyRemote
         // is due (roughly every FRAMES_PER_MARKER_RESCAN frames).
         void SampleMapMarkers();
 
+        // Scans the quest journal for running quests with displayed objectives and
+        // broadcasts the result.  Runs every FRAMES_PER_QUEST_RESCAN frames or
+        // immediately when a set_active_quest action is pending.
+        void SampleQuests();
+
         std::atomic<bool>        _active{ false };
         std::atomic<bool>        _registered{ false };
 
@@ -66,6 +76,11 @@ namespace PipBoyRemote
         // Written from the uWS thread (SetWaypointFormID); read on the game thread
         // (SampleMapMarkers).  Zero means no waypoint is currently set.
         std::atomic<std::uint32_t> _waypointFormID{ 0 };
+
+        // FormID of the quest the frontend wants to set as tracked.
+        // Written from the uWS thread (SetActiveQuestFormID); consumed and zeroed on
+        // the game thread (SampleQuests).  Zero means no pending change.
+        std::atomic<std::uint32_t> _pendingActiveQuestFormID{ 0 };
 
         // Frame counter used to throttle sampling to roughly every 100 ms at 60 fps
         // (i.e. every 6 frames).
@@ -82,5 +97,11 @@ namespace PipBoyRemote
         int                      _markerRescanCounter{ 0 };
         bool                     _forceMapMarkerRescan{ false };
         RE::TESWorldSpace*       _lastWorldspace{ nullptr };
+
+        // Quest rescan: broadcast every FRAMES_PER_QUEST_RESCAN frames so objective
+        // completions and stage changes are reflected in the frontend promptly.
+        static constexpr int     FRAMES_PER_QUEST_RESCAN = 120;  // ~2 s at 60 fps
+        int                      _questRescanCounter{ 0 };
+        bool                     _forceQuestRescan{ false };
     };
 }

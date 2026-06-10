@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "quest_update",
+  "description": "Snapshot of the player's active quest journal, broadcast every ~2 seconds.",
+  "type": "object",
+  "required": ["type", "timestamp", "quests"],
+  "properties": {
+    "type":      { "const": "quest_update" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "quests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["formID", "name", "currentStage", "isTracked", "objectives"],
+        "properties": {
+          "formID":       { "type": "integer", "minimum": 0 },
+          "name":         { "type": "string", "minLength": 1 },
+          "currentStage": { "type": "integer", "minimum": 0 },
+          "isTracked":    { "type": "boolean" },
+          "objectives": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["index", "text", "isCompleted"],
+              "properties": {
+                "index":       { "type": "integer", "minimum": 0 },
+                "text":        { "type": "string" },
+                "isCompleted": { "type": "boolean" }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "activeQuestFormID": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "FormID of the currently tracked quest; absent when none is tracked."
+    }
+  },
+  "additionalProperties": false
+}

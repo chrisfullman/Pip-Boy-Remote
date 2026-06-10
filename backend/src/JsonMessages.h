@@ -29,4 +29,8 @@ namespace PipBoyRemote::JsonMessages
     // schema/map-markers-update.schema.json
     // Sent on worldspace entry and periodically to reflect newly-discovered locations.
     std::string BuildMapMarkersUpdate(const MapMarkersSnapshot& snapshot);
+
+    // schema/quest-update.schema.json
+    // Sent periodically to reflect the player's active quest journal state.
+    std::string BuildQuestUpdate(const QuestSnapshot& snapshot);
 }

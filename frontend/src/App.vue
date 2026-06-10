@@ -5,6 +5,7 @@ import ConnectionBanner from '@/components/ConnectionBanner.vue'
 import PlayerStatus    from '@/components/PlayerStatus.vue'
 import InventoryList   from '@/components/InventoryList.vue'
 import MapView         from '@/components/MapView.vue'
+import QuestView       from '@/components/QuestView.vue'
 
 const prefs = usePreferencesStore()
 
@@ -31,6 +32,7 @@ watch(() => prefs.darkMode, applyTheme)
     <main class="content">
       <div class="col col--status">
         <PlayerStatus />
+        <QuestView />
       </div>
       <div class="col col--inventory">
         <InventoryList />
@@ -89,7 +91,7 @@ watch(() => prefs.darkMode, applyTheme)
   min-width: 280px;
 }
 
-.col--status    { flex: 0 0 300px; }
+.col--status    { flex: 0 0 300px; display: flex; flex-direction: column; gap: 12px; }
 .col--inventory { flex: 1 1 340px; }
 .col--map       { flex: 0 0 544px; }   /* 512px canvas + 14px padding × 2 + 2px border */
 </style>

@@ -49,7 +49,8 @@ namespace PipBoyRemote
         // Player character level and experience
         float level              = 1.0f;
         float experience         = 0.0f;
-        float nextLevelXP        = 200.0f;
+        float nextLevelXP        = 200.0f;  // cumulative XP threshold to reach level+1
+        float levelStartXP       = 0.0f;    // cumulative XP at the start of the current level
     };
 
     // Category tags that mirror the Pip-Boy's inventory tabs.
@@ -100,5 +101,31 @@ namespace PipBoyRemote
         std::vector<MapMarker> markers;
         std::string            worldspace;             // worldspace editor ID, e.g. "Commonwealth"
         std::uint32_t          activeWaypointID = 0;   // form ID of active waypoint; 0 if none
+    };
+
+    // A single objective belonging to a running quest.
+    struct QuestObjective
+    {
+        std::uint16_t index       = 0;
+        std::string   text;
+        bool          isCompleted = false;
+    };
+
+    // A running quest visible in the player's Pip-Boy journal.
+    struct QuestEntry
+    {
+        std::uint32_t               formID       = 0;
+        std::string                 name;
+        std::uint16_t               currentStage = 0;
+        bool                        isTracked    = false;   // shown in HUD / active in Pip-Boy
+        std::vector<QuestObjective> objectives;              // currently displayed objectives only
+    };
+
+    // Complete snapshot of the player's active quest journal.
+    // Written by GameStatePoller on the game thread; read by WebSocketServer.
+    struct QuestSnapshot
+    {
+        std::vector<QuestEntry> quests;
+        std::uint32_t           activeQuestFormID = 0;  // formID of the tracked quest; 0 if none
     };
 }

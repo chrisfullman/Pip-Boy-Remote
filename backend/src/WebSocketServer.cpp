@@ -31,11 +31,12 @@ namespace PipBoyRemote
 
         void DispatchAction(WS* ws, std::string_view raw);
 
-        void HandleSetWaypoint (WS* ws, const nlohmann::json& msg);
-        void HandleFastTravel  (WS* ws, const nlohmann::json& msg);
-        void HandleEquipItem   (WS* ws, const nlohmann::json& msg);
-        void HandleUnequipItem (WS* ws, const nlohmann::json& msg);
-        void HandleConsumeItem (WS* ws, const nlohmann::json& msg);
+        void HandleSetWaypoint    (WS* ws, const nlohmann::json& msg);
+        void HandleFastTravel     (WS* ws, const nlohmann::json& msg);
+        void HandleEquipItem      (WS* ws, const nlohmann::json& msg);
+        void HandleUnequipItem    (WS* ws, const nlohmann::json& msg);
+        void HandleConsumeItem    (WS* ws, const nlohmann::json& msg);
+        void HandleSetActiveQuest (WS* ws, const nlohmann::json& msg);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -114,6 +115,15 @@ namespace PipBoyRemote
     {
         if (!_running.load(std::memory_order_relaxed) || !_loop) { return; }
         auto payload = JsonMessages::BuildMapMarkersUpdate(snapshot);
+        _loop->defer([this, msg = std::move(payload)]() mutable {
+            if (_publisher) { _publisher(std::move(msg)); }
+        });
+    }
+
+    void WebSocketServer::BroadcastQuestUpdate(const QuestSnapshot& snapshot)
+    {
+        if (!_running.load(std::memory_order_relaxed) || !_loop) { return; }
+        auto payload = JsonMessages::BuildQuestUpdate(snapshot);
         _loop->defer([this, msg = std::move(payload)]() mutable {
             if (_publisher) { _publisher(std::move(msg)); }
         });
@@ -258,11 +268,12 @@ namespace PipBoyRemote
 
             const std::string action = msg["action"].get<std::string>();
 
-            if      (action == "set_waypoint") { HandleSetWaypoint (ws, msg); }
-            else if (action == "fast_travel")  { HandleFastTravel  (ws, msg); }
-            else if (action == "equip")        { HandleEquipItem   (ws, msg); }
-            else if (action == "unequip")      { HandleUnequipItem (ws, msg); }
-            else if (action == "consume")      { HandleConsumeItem (ws, msg); }
+            if      (action == "set_waypoint")    { HandleSetWaypoint    (ws, msg); }
+            else if (action == "fast_travel")     { HandleFastTravel     (ws, msg); }
+            else if (action == "equip")           { HandleEquipItem      (ws, msg); }
+            else if (action == "unequip")         { HandleUnequipItem    (ws, msg); }
+            else if (action == "consume")         { HandleConsumeItem    (ws, msg); }
+            else if (action == "set_active_quest") { HandleSetActiveQuest(ws, msg); }
             else {
                 ws->send(JsonMessages::BuildActionResponse(action, false, "Unknown action"), uWS::OpCode::TEXT);
             }
@@ -380,6 +391,23 @@ namespace PipBoyRemote
                 const RE::BGSObjectInstance inst{ alch, nullptr };
                 manager->EquipObject(player, inst, 0, 1, nullptr, false, false, true, true, false);
             });
+        }
+        void HandleSetActiveQuest(WS* ws, const nlohmann::json& msg)
+        {
+            if (!msg.contains("formID") || !msg["formID"].is_number_integer()) {
+                ws->send(
+                    JsonMessages::BuildActionResponse("set_active_quest", false, "Missing 'formID'"),
+                    uWS::OpCode::TEXT
+                );
+                return;
+            }
+            const auto questFormID = msg["formID"].get<std::uint32_t>();
+            ws->send(JsonMessages::BuildActionResponse("set_active_quest", true), uWS::OpCode::TEXT);
+
+            // Store the request; the game-thread poller applies it on the next quest
+            // sample by setting kDisplayedInHUD on the target quest and clearing it on
+            // all others.  This syncs the in-game Pip-Boy tracked quest with the frontend.
+            GameStatePoller::GetSingleton().SetActiveQuestFormID(questFormID);
         }
     }  // namespace (anonymous)
 }
