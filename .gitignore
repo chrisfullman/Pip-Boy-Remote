@@ -31,3 +31,4 @@ logs/*.txt
 # These are GPL-3.0 assets from Mappalachia/Commonwealth_Cartography —
 # run the script to fetch them before starting the dev server.
 frontend/public/maps/
+logs/Fallout 4 XP Table.csv
