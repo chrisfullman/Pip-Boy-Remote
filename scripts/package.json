@@ -5,7 +5,8 @@
   "private": true,
   "description": "Dev helper scripts for Pip-Boy Remote",
   "scripts": {
-    "replay": "node replay.js"
+    "replay": "node replay.js",
+    "capture": "node capture.js"
   },
   "dependencies": {
     "ws": "^8.18.2"

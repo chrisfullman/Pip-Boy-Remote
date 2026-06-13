@@ -4,10 +4,10 @@
  *
  * Reads a JSON Lines log file (one JSON message per line) and replays the
  * messages over a WebSocket so the frontend can be developed and tested
- * without a running Fallout 4 game session.
+ * without needing to open Fallout 4 and run a game session.
  *
  * Usage:
- *   node scripts/replay.js [options] <logfile>
+ *   node scripts/replay.js [options] "<logfile>"
  *
  * Options:
  *   --port  <n>   Port to listen on           (default: 11104)
@@ -18,19 +18,19 @@
  *
  * Log file formats:
  *   JSON Lines (.jsonl): one JSON object per line; '#' lines and blank lines
- *   are skipped.  This is the format produced by sample.jsonl.
+ *   are skipped. This is the format produced by sample.jsonl.
  *
- *   Chrome DevTools WebSocket export (.txt): tab-separated "Data<TAB>Time"
- *   format exported from the Chrome DevTools Network → WS → Messages panel.
- *   Non-JSON rows (e.g. "WebSocket Connection Established") are skipped
- *   automatically.  The format is detected from the first line.
+ *   Chrome/Safari/Webkit WebSocket export (.txt): tab-separated "Data<TAB>Time"
+ *   format exported from the browser's Dev Tools' Network → WS → Messages panel.
+ *   Non-JSON action rows (e.g. "WebSocket Connection Established") are skipped
+ *   automatically. The format is detected from the first line.
  *
  * Example JSONL line:
  *   {"type":"state_update","timestamp":"2026-06-07T12:00:00.000Z","player":{...}}
  *
- * If no log file is provided the harness generates synthetic heartbeat and
- * state-update messages in a simple loop so you can develop the UI without
- * any recorded data.
+ * If no log file is provided, the harness generates simulated heartbeat and
+ * state-update messages in a simple loop so you can develop and test the UI 
+ * without requiring any previously-saved gameplay session data; not ideal, though.
  */
 
 import http               from 'node:http';
@@ -81,7 +81,7 @@ wss.on('connection', (ws) => {
     clients.add(ws);
     console.log(`[replay] Client connected  (${clients.size} total)`);
 
-    // Immediately send a synthetic welcome heartbeat.
+    // Immediately send a simulated welcome heartbeat.
     ws.send(JSON.stringify({
         type:      'heartbeat',
         timestamp: new Date().toISOString(),
@@ -89,7 +89,7 @@ wss.on('connection', (ws) => {
     }));
 
     ws.on('message', (raw) => {
-        // Echo action messages back to the sender as a synthetic success response.
+        // Echo action messages back to the sender as a simulated success response.
         try {
             const msg = JSON.parse(raw.toString());
             if (msg.action) {
@@ -183,8 +183,8 @@ function parseDevToolsLog(lines) {
 }
 
 /**
- * Loads messages from either a JSON Lines file or a Chrome DevTools WebSocket
- * export.  The format is detected automatically from the first non-blank line.
+ * Loads messages from either a JSON Lines (.jsonl) file or a WebSocket export.
+ * The format is detected automatically from the first non-blank line.
  * @param {string} filePath
  * @returns {object[]}
  */
@@ -242,10 +242,10 @@ async function replayMessages(messages, speedMultiplier) {
     }
 }
 
-// ── Synthetic demo mode (no log file) ───────────────────────────────────────
+// ── Simulated demo mode (no log file) ───────────────────────────────────────
 
-function startSyntheticMode() {
-    console.log('[replay] No log file provided — running in synthetic demo mode');
+function startSimulatedMode() {
+    console.log('[replay] No log file provided — running in simulated demo mode');
 
     let tick   = 0;
     let health = 100;
@@ -307,7 +307,7 @@ httpServer.listen(opts.port, opts.host, () => {
     console.log(`[replay] Speed: ${opts.speed}x  Loop: ${opts.loop ? 'yes' : 'no'}`);
 
     if (!opts.file) {
-        startSyntheticMode();
+        startSimulatedMode();
         return;
     }
 

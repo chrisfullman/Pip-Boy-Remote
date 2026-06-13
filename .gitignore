@@ -20,7 +20,9 @@ frontend/node_modules/
 frontend/.vite/
 scripts/node_modules/
 
-# Replay / dev logs (live captures are ignored; the sample fixture is tracked)
+# Replay, development logs, and saved session gameplay WebSocket captures are ignored.
+# The sample fixture is tracked, though.
+logs/*.csv
 logs/*.db
 logs/*.jsonl
 logs/*.log
@@ -29,6 +31,5 @@ logs/*.txt
 
 # Third-party map assets (downloaded by scripts/download-assets.sh)
 # These are GPL-3.0 assets from Mappalachia/Commonwealth_Cartography —
-# run the script to fetch them before starting the dev server.
+# If needed, run `download-assets.sh` to fetch them before starting the dev server.
 frontend/public/maps/
-logs/Fallout 4 XP Table.csv

@@ -7,6 +7,9 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     host: true, // bind to 0.0.0.0 so other devices on the LAN can reach the dev server
+    fs: {
+      allow: ['..'], // allow serving files from the repo root (e.g., /schema/*.json)
+    },
   },
   resolve: {
     alias: {
